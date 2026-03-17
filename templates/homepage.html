@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Guardian - Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="homepage-body">
+
+
+    <div class="nav-right">
+        <a href="{{ url_for('logout') }}" class="btn-orange-logout">Logout</a>
+    </div>
+
+
+
+    <h1 class="welcome-header">
+        Welcome back, <span class="username-underline">{{ username }}</span>!
+    </h1>
+
+    <div class="container" style="text-align: center; color: #333; margin-top: 20px;">
+        <p style="font-size: 18px; max-width: 600px; margin: 0 auto;">
+            You are currently viewing the Quiet Gardeners Community dashboard.
+                            Scroll down to see your tags.
+        </p>
+    </div>
+
+
+    <div class="landscape-container"></div>
+
+</body>
+</html>
