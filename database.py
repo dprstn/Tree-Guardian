@@ -9,10 +9,14 @@ class User(db.Model):
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     username = db.Column(db.String(100), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
     role= db.Column(db.String(50), nullable=False)
     dob = db.Column(db.Date)
     hash_password = db.Column(db.String(255), nullable=False)
     is_active = db.Column(db.Boolean, default=False)
+    email_verified = db.Column(db.Boolean, default=False)
+    verification_token = db.Column(db.String(100), unique=True)
+    token_created_at = db.Column(db.DateTime)
 
 class Species(db.Model):
     species_id = db.Column(db.Integer, primary_key=True)

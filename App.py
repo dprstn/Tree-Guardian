@@ -1,25 +1,42 @@
-from flask import Flask, flash, render_template, request, redirect, url_for, session
+import re
+from flask import Flask, flash, render_template, request, redirect, url_for, session, get_flashed_messages
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date
 from database import db, User
-
+from flask_mail import Mail, Message
+import secrets
 app = Flask(__name__)
 app.secret_key = 'quiet_gardeners'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///TreeGuardian.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# EMAIL CONFIGURATION
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'quietgardenercollective@gmail.com'
+app.config['MAIL_PASSWORD'] = 'kotn ilrf ewoe qmvd'
+app.config['MAIL_DEFAULT_SENDER'] = 'quietgardenercollective@gmail.com'
+
+
+mail = Mail(app)
 db.init_app(app)
+
+
 
 with app.app_context():
     db.create_all()
     admin = User(first_name = "Preston",
                  last_name = "De Sousa",
                  username = "Preston",
+                 email="quietgardenercollective@gmail.com",
                  role = "admin",
                  dob=date(2004,10,4),
                  hash_password=generate_password_hash("Preston123"),
-                 is_active=False)
+                 is_active=False,
+                 email_verified=True)
 
     existing_admin = User.query.filter_by(username="Preston").first()
 
@@ -28,6 +45,9 @@ with app.app_context():
         db.session.commit()
         print("Admin created!")
 
+def isEmailValid(email):
+    regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(regex, email) is not None
 
 @app.route('/')
 def home():
@@ -41,10 +61,13 @@ def register():
         username = request.form['username'].strip('')
         password = request.form['password'].strip('')
         dob = request.form['dob'].strip('')
+        email = request.form['email'].strip('')
 
-        if not first_name and not last_name and not password and not username and not dob:
+        if not first_name and not last_name and not password and not username and not dob and not email:
             flash("All fields are required!")
 
+        elif not isEmailValid(email):
+            flash("Invallid email format! Please use correct format user@example.com", "danger")
         elif not first_name:
             flash("Please enter first name", "danger")
         elif not last_name:
@@ -62,29 +85,57 @@ def register():
         else:
 
             existing_user = User.query.filter_by(username=username).first()
+            existing_email = User.query.filter_by(email=email).first()
 
 
 
             if existing_user:
                 flash(f"Username  {username} already exist", "danger")
 
+
+            elif existing_email:
+
+                if not existing_email.email_verified:
+                    db.session.delete(existing_email)
+                    db.session.commit()
+                else:
+                    flash("Email already exists", "danger")
+                    return render_template('register.html')
+
             else:
+                token =secrets.token_urlsafe(32)
 
                 hashed_password = generate_password_hash(password)
 
                 register_user = User(first_name=first_name,
                                      last_name=last_name,
                                      username=username,
+                                     email=email,
                                      role='user',
                                      dob=datetime.strptime(dob, "%Y-%m-%d").date(),
                                      hash_password=hashed_password,
-                                     is_active=False)
+                                     is_active=False,
+                                     verification_token=token,
+                                     email_verified=False,
+                                     token_created_at=datetime.now())
 
                 db.session.add(register_user)
                 db.session.commit()
 
+                try:
+                    msg = Message("Verify your Tree Guardian Account", recipients=[email])
 
-                flash("registration successful !", "success")
+                    link = url_for('verify_email', token=token, _external=True)
+                    msg.body = f"Hello {first_name}! Thank you for registering. Click here to verify: {link}"
+                    mail.send(msg)
+                    flash("Please check your email to verify your account.", "success")
+                except Exception as e:
+                    print(f"Mail error: {e}")
+                    flash("We couldn't send the verification email", "warning")
+
+
+
+
                 return redirect(url_for('login'))
     return  render_template('register.html')
 
@@ -119,6 +170,27 @@ def date_of_birth_is_valid(dob):
 
     return True
 
+@app.route('/verify/<token>')
+def verify_email(token):
+    get_flashed_messages()
+    session.clear()
+    user = User.query.filter_by(verification_token=token).first()
+    if user:
+        time_diff = datetime.now() - user.token_created_at
+        if time_diff.total_seconds() > 86400:#= 24 hours
+            db.session.delete(user)
+            db.session.commit()
+            flash("Verification link expired. Please register again ", "danger")
+            return redirect(url_for('register'))
+        user.email_verified = True
+        user.verification_token = None
+        db.session.commit()
+        flash("Email verified successfully! You can now log in.", "success")
+        return redirect(url_for('login'))
+    else:
+        flash("Invalid link or already verified.", "danger")
+        return redirect(url_for('login'))
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -136,6 +208,11 @@ def login():
         else:
             existing_user = User.query.filter_by(username=username).first()
             if existing_user and check_password_hash(existing_user.hash_password, password):
+
+               if not existing_user.email_verified:
+                   flash("Please verify your email address before logging in.", "warning")
+                   return redirect(url_for('login'))
+
                #saving user session
                session['username'] = existing_user.username
                session['role'] = existing_user.role
