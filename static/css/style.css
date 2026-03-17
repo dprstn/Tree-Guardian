@@ -1,0 +1,375 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: 'Open Sans', sans-serif;
+}
+
+
+.nav-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+}
+
+.login-btn-top {
+    background-color: #009344;
+    color: white;
+    text-decoration: none;
+    padding: 12px 30px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+.login-btn-top:hover {
+    background-color: #007033;
+}
+
+
+.white-spacer {
+    height: 40vh;
+    background-color: #ffffff;
+}
+
+.leaf-separator {
+    width: 100%;
+    line-height: 0;
+}
+
+.leaf-separator svg {
+    width: 100%;
+    height: 80px;
+}
+
+
+.tree-hero {
+    background-color: #042c1b;
+    padding: 60px 20px 100px 20px;
+    text-align: center;
+    color: #ffffff;
+}
+
+.hero-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.tree-hero h1 {
+    font-size: 48px;
+    font-weight: 800;
+    margin-bottom: 5px;
+}
+
+.accent-line {
+    width: 100px;
+    height: 8px;
+    background-color: #ed8f1c;
+    margin: 20px auto;
+}
+
+.tree-hero p {
+    font-size: 19px;
+    line-height: 1.6;
+    margin-bottom: 40px;
+}
+
+
+.signup-btn-orange {
+    background-color: #ed8f1c;
+    color: #000000;
+    text-decoration: none;
+    padding: 18px 45px;
+    border-radius: 5px;
+    font-weight: 800;
+    font-size: 18px;
+    display: inline-block;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.signup-btn-orange i {
+    margin-right: 10px;
+}
+
+.signup-btn-orange:hover {
+    background-color: #d87c1a;
+    transform: scale(1.05);
+}
+
+.resubscribe-text {
+    margin-top: 30px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #eeeeee;
+}
+
+.resubscribe-text a {
+    color: #ed8f1c;
+    text-decoration: none;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    font-family: 'Open Sans', sans-serif;
+    overflow-x: hidden; /* Prevents horizontal scroll glitches */
+}
+
+/* TOP RIGHT LOGOUT BUTTON */
+.nav-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+/* --- HOMEPAGE SPECIFIC STYLES --- */
+
+.homepage-body {
+    background-color: #ffffff;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+
+.welcome-header {
+    color: #042c1b;
+    font-size: 42px;
+    font-weight: 800;
+    margin-top: 60px;
+    text-align: center;
+    width: 100%;
+}
+
+
+.nav-right {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+}
+
+.btn-orange-logout {
+    background-color: #ed8f1c;
+    color: #000000;
+    text-decoration: none;
+    padding: 10px 30px;
+    border-radius: 5px;
+    font-weight: 800;
+    font-size: 14px;
+    transition: 0.3s;
+}
+
+.btn-orange-logout:hover {
+    background-color: #d87c1a;
+    transform: scale(1.05);
+}
+
+
+.landscape-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 400px;
+    background-image: url("https://treecouncil.org.uk/wp-content/uploads/2020/02/Footer_BG_New.png");
+    background-repeat: repeat-x;
+    background-position: bottom center;
+    background-size: contain;
+
+    filter: brightness(0.4) sepia(1) hue-rotate(100deg) saturate(2);
+    z-index: -1;
+}
+
+
+.welcome-header {
+    color: #042c1b;
+    font-size: 42px;
+    font-weight: 800;
+    margin-top: 60px;
+    text-align: center;
+    width: 100%;
+}
+
+
+.username-underline {
+    position: relative;
+    display: inline-block;
+}
+
+.username-underline::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -12px;
+    height: 8px;
+    background-color: #ed8f1c;
+    border-radius: 2px;
+}
+
+
+@font-face {
+    font-family: "GT Ultra Median Lloyds";
+    src: url(data:font/woff;charset=utf-8;base64,...) format("woff"); /* Simplified for brevity, use your existing font-face code */
+    font-weight: normal;
+    font-style: normal;
+}
+
+
+.split-screen-container {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+
+.info-section {
+    flex: 1.2;
+    background-color: #e1f6db;
+    padding: 60px;
+    color: #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+
+.form-section {
+    flex: 0.8;
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+
+.info-section h1 {
+    font-family: "GT Ultra Median Lloyds", serif;
+    font-size: 52px;
+    color: #323233;
+    margin-bottom: 30px;
+}
+
+.rating-chart {
+    margin-bottom: 40px;
+}
+
+.rating-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 18px;
+    font-family: "GT Ultra Median Lloyds";
+}
+
+.rating-name { width: 100px; }
+
+.circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: #d1d1d1;
+    margin-right: 8px;
+}
+.circle.active { background-color: #323233; }
+
+.info-text {
+    font-family: "Arial", sans-serif;
+    font-size: 18px;
+    line-height: 1.6;
+    color: #505050;
+    max-width: 500px;
+    margin-bottom: 50px;
+}
+
+
+.slogan-box {
+    display: flex;
+    gap: 0;
+    align-items: center;
+    margin-top: 40px;
+    font-family: 'Patrick Hand', cursive;
+}
+
+.slogan-part {
+    background-color: #f6c343;
+    padding: 10px 15px;
+    font-size: 38px;
+    color: #042c1b;
+    line-height: 1;
+    display: inline-block;
+}
+
+.slogan-part.white {
+    background-color: #ffffff;
+    color: #042c1b;
+    border: none;
+    padding: 10px 20px;
+
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+
+.slogan-part:first-child {
+    text-transform: none;
+    border-radius: 5px 0 0 5px;
+}
+.slogan-part:last-child {
+    text-transform: none;
+    border-radius: 0 5px 5px 0;
+}
+
+.btn-register {
+    background-color: #11b67a;
+    color: white;
+    padding: 15px;
+    border: none;
+    border-radius: 5px;
+    width: 100%;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+
+
+.form-section input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    display: block;
+    box-sizing: border-box;
+}
+
+
+.form-section input[type="date"] {
+    font-family: 'Open Sans', sans-serif;
+    color: #555;
+}
+
+
+.form-section form {
+    width: 100%;
+}
+
+
+.form-section input:focus {
+    outline: none;
+    border-color: #11b67a;
+    box-shadow: 0 0 5px rgba(17, 182, 122, 0.2);
+}
