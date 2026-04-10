@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tree Guardian - Home</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
 </head>
 <body class="homepage-body">
 
@@ -14,16 +15,75 @@
     </div>
 
 
+    <nav class="mobile-nav">
+        <div class="nav-center">
+            <a href="{{ url_for('homepage') }}" class="nav-item">
+                <i class="fa-solid fa-house"></i> Home
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fa-solid fa-tree"></i> Local Trees
+            </a>
+        </div>
+    </nav>
 
-    <h1 class="welcome-header">
-        Welcome back, <span class="username-underline">{{ username }}</span>!
-    </h1>
 
-    <div class="container" style="text-align: center; color: #333; margin-top: 20px;">
-        <p style="font-size: 18px; max-width: 600px; margin: 0 auto;">
-            You are currently viewing the Quiet Gardeners Community dashboard.
-                            Scroll down to see your tags.
-        </p>
+    <div class="main-content">
+
+        <h1 class="welcome-header">
+            Welcome back, <span class="username-underline">{{ username }}</span>!
+        </h1>
+
+        <div class="container" style="text-align: center; color: #333; margin-top: 20px;">
+            <p style="font-size: 16px; margin: 0 auto;">
+                You are currently viewing the Quiet Gardeners Community dashboard.
+                Scroll down to see your tags!
+            </p>
+        </div>
+
+
+        <div class="button-grid">
+            <a href="#" class="c-button gold-variation">ADOPTED TREES • {{ adopted_count }}</a>
+            <a href="#" class="c-button gold-variation">ADD OBSERVATION</a>
+            <div class="center-single-button">
+                <a href="#" class="c-button gold-variation">ADOPT A TREE</a>
+            </div>
+        </div>
+
+
+        <h2 class="section-heading">DASHBOARD STATS</h2>
+
+        <div class="stats-grid">
+            <div class="stat-card wide-label">
+                <span class="stat-number">{{ total_trees_in_db }}</span>
+                <i class="fa-solid fa-tree"></i>
+                <span class="stat-label">TOTAL TREES IN COMMUNITY</span>
+            </div>
+
+            <a href="{{ url_for('observation_details', obs_type='all') }}" class="stat-card clickable">
+                <span class="stat-number">{{ obs_count }}</span>
+                <div class="stat-info">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span class="stat-label">OBSERVATIONS</span>
+                </div>
+            </a>
+
+            <a href="{{ url_for('observation_details', obs_type='wildlife') }}" class="stat-card clickable">
+                <span class="stat-number">{{ wildlife_count }}</span>
+                <div class="stat-info">
+                    <i class="fa-solid fa-paw"></i>
+                    <span class="stat-label">WILDLIFE SIGHTINGS</span>
+                </div>
+            </a>
+
+            <a href="{{ url_for('observation_details', obs_type='disease') }}" class="stat-card clickable">
+                <span class="stat-number">{{ disease_count }}</span>
+                <div class="stat-info">
+                    <i class="fa-solid fa-virus-covid"></i>
+                    <span class="stat-label">HEALTH ALERTS</span>
+                </div>
+            </a>
+        </div>
+
     </div>
 
 

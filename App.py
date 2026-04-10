@@ -2,7 +2,7 @@ import re
 from flask import Flask, flash, render_template, request, redirect, url_for, session, get_flashed_messages
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date
-from database import db, User
+from database import db, User, Adoption, Observation, Observation_type, Tree
 from flask_mail import Mail, Message
 import secrets
 app = Flask(__name__)
@@ -267,8 +267,77 @@ def homepage():
         flash("Please login first!", "danger")
         return redirect(url_for('login'))
 
-    return render_template("homepage.html", username=session['username'], role=session.get('role', 'user'))
+    user = User.query.filter_by(username=session['username']).first()
 
+    adopted_count = Adoption.query.filter_by(user_id=user.user_id).count()
+
+    total_trees_in_db = Tree.query.count()
+
+    #3. getting list of all the trees the user has adopted and list of trees IDs to filter observations
+
+    my_adoptions = Adoption.query.filter_by(user_id=user.user_id).all()
+    my_tree_ids = [adopt.tree_id for adopt in my_adoptions]
+
+    if my_tree_ids:
+        # total observation made on user trees by anyone
+        obs_count = Observation.query.filter(Observation.tree_id.in_(my_tree_ids)).count()
+
+        # for wildlife sightings on your trees
+
+        wildlife_count = db.session.query(Observation).join(Observation_type).filter(
+            Observation.tree_id.in_(my_tree_ids),
+            Observation_type.observation_category == "Wildlife"
+        ).count()
+
+
+    ######################## DISEASE REPORT ############################
+        disease_count = db.session.query(Observation).join(Observation_type).filter(
+            Observation.tree_id.in_(my_tree_ids),
+            Observation_type.observation_report == "Disease"
+        ).count()
+    else:
+        # If user hasn't adopted any trees yet then set everything to 0
+        obs_count, wildlife_count, disease_count = 0, 0, 0
+
+
+    return render_template("homepage.html", username=user.username, role=user.role, adopted_count=adopted_count,
+                           total_trees_in_db=total_trees_in_db,
+                           obs_count=obs_count,
+                           wildlife_count=wildlife_count,
+                           disease_count=disease_count)
+
+
+@app.route('/observation_details/<obs_type>')
+def observation_details(obs_type):
+    if not session.get("is_active"):
+        return redirect(url_for('login'))
+
+    user = User.query.filter_by(username=session['username']).first()
+
+    my_adoptions = Adoption.query.filter_by(user_id=user.user_id).all()
+    my_tree_ids = [adopt.tree_id for adopt in my_adoptions]
+
+
+    query = db.session.query(Observation).join(Observation_type).filter(
+        Observation.tree_id.in_(my_tree_ids)
+    )
+
+    #3. Filter the list based on which card was clicked.
+
+    if obs_type == "wildlife":
+        query = query.filter(Observation_type.observation_category == "Wildlife")
+        title = "Wildlife Sightings"
+
+    elif obs_type == "disease":
+        query = query.filter(Observation_type.observation_report == "Disease")
+        title = "Health Alerts"
+
+    else:
+        title = "All Observations"
+
+    notes = query.all()
+
+    return render_template("notes_list.html", notes=notes, title=title)
 @app.route('/logout')
 def logout():
     username = session.get('username')

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="background-color: #f4fdf4; padding: 30px; font-family: sans-serif;">
+    <a href="{{ url_for('homepage') }}" style="color: #042c1b; font-weight: bold; text-decoration: none;">← Back to Dashboard</a>
+
+    <h1 style="color: #042c1b; margin-top: 20px;">{{ title }} for your Trees</h1>
+    <hr>
+
+    {% if notes %}
+        {% for n in notes %}
+        <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 6px solid #fbb034; shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <p style="margin: 0; color: #666; font-size: 0.9em;">Tree #{{ n.tree_id }}</p>
+            <p style="font-size: 1.1em; margin: 10px 0;"><strong>Note:</strong> {{ n.notes }}</p>
+            <p style="margin: 0; color: #999; font-size: 0.8em;">Observed on: {{ n.observed_time.strftime('%d %b %Y') }}</p>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div style="text-align: center; margin-top: 50px; color: #888;">
+            <p>There are no notes recorded for your adopted trees in this category yet.</p>
+        </div>
+    {% endif %}
+</body>
+</html>

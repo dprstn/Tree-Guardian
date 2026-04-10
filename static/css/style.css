@@ -119,10 +119,10 @@ body, html {
     padding: 0;
     width: 100%;
     font-family: 'Open Sans', sans-serif;
-    overflow-x: hidden; /* Prevents horizontal scroll glitches */
+    overflow-x: hidden;
 }
 
-/* TOP RIGHT LOGOUT BUTTON */
+
 .nav-container {
     position: absolute;
     top: 20px;
@@ -130,7 +130,7 @@ body, html {
     z-index: 1000;
 }
 
-/* --- HOMEPAGE SPECIFIC STYLES --- */
+
 
 .homepage-body {
     background-color: #ffffff;
@@ -145,9 +145,10 @@ body, html {
     color: #042c1b;
     font-size: 42px;
     font-weight: 800;
-    margin-top: 60px;
+    margin-top: 40px;
     text-align: center;
     width: 100%;
+    white-space; nowrap
 }
 
 
@@ -195,9 +196,10 @@ body, html {
     color: #042c1b;
     font-size: 42px;
     font-weight: 800;
-    margin-top: 60px;
+    margin-top: 40px;
     text-align: center;
     width: 100%;
+    white-space: nowrap;
 }
 
 
@@ -220,7 +222,7 @@ body, html {
 
 @font-face {
     font-family: "GT Ultra Median Lloyds";
-    src: url(data:font/woff;charset=utf-8;base64,...) format("woff"); /* Simplified for brevity, use your existing font-face code */
+    src: url(data:font/woff;charset=utf-8;base64,...) format("woff");
     font-weight: normal;
     font-style: normal;
 }
@@ -372,4 +374,251 @@ body, html {
     outline: none;
     border-color: #11b67a;
     box-shadow: 0 0 5px rgba(17, 182, 122, 0.2);
+}
+
+.mobile-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background: #fff;
+    position: relative;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.nav-center {
+    display: flex;
+    gap: 40px;
+}
+
+.nav-item {
+    text-decoration: none;
+    color: #333;
+    font-weight: 800;
+    font-size: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: 0.3s;
+}
+
+.nav-item i {
+    color: #042c1b;
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+
+.nav-item:hover { color: #fbb034; }
+
+.button-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin: 30px auto;
+    max-width: 480px;
+    padding: 0 10px;
+}
+
+
+.center-single-button {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+
+.center-single-button .c-button.gold-variation {
+    width: calc(50% - 7.5px);
+}
+
+
+.c-button.gold-variation {
+    background-color: #fbb034;
+    color: #042c1b;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 800;
+
+
+    font-size: 14px;
+
+    padding: 18px 10px
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    border: 2px solid #fbb034;
+    min-height: 60px;
+    text-align: center;
+    box-sizing: border-box;
+
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* HOVER EFFECT: SWAP COLORS */
+.c-button.gold-variation:hover {
+    background-color: #042c1b;
+    color: #fbb034;
+    border-color: #042c1b;
+    transform: translateY(-2px);
+}
+
+
+@media (max-width: 400px) {
+    .button-grid {
+        grid-template-columns: 1fr;
+    }
+    .center-single-button {
+        grid-column: span 1;
+    }
+    .center-single-button .c-button.gold-variation {
+        width: 100%;
+    }
+}
+
+
+#############################################################
+
+.main-content {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+
+.section-heading {
+    color: #0b422a;
+    font-size: 14px;
+    font-weight: 800;
+    text-align: left;
+    margin: 30px 0 10px 0;
+    letter-spacing: 1px;
+}
+
+/* --- Stats Grid Layout --- */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+
+.stat-card {
+    background-color: #0b422a;
+    color: #fbb034;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 15px 5px;
+    min-height: 90px;
+    text-decoration: none;
+    transition: transform 0.2s ease;
+}
+
+
+.wide-label {
+    grid-column: 1 / -1;
+    flex-direction: row !important;
+    gap: 15px;
+    min-height: 60px;
+    margin-bottom: 5px;
+}
+
+
+.stat-number {
+    font-size: 22px;
+    font-weight: 800;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-info i {
+    font-size: 16px;
+}
+
+.stat-label {
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* HOVER EFFECT */
+.stat-card.clickable:hover {
+    background-color: #0d5234;
+    transform: translateY(-2px);
+}
+
+
+.button-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.center-single-button {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+}
+
+.center-single-button .c-button {
+    width: calc(50% - 7.5px);
+}
+
+
+
+.homepage-body .main-content {
+    max-width: 600px !important;
+    margin: 0 auto !important;
+    padding: 20px;
+    display: block;
+}
+
+
+.stat-card {
+    background-color: #0b422a !important;
+    color: #fbb034 !important;
+    border-radius: 15px !important;
+    min-height: 90px !important;
+    border: none !important;
+}
+
+
+.wide-label {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-height: 65px !important;
+}
+
+
+.center-single-button {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+    justify-content: center !important;
+}
+
+.center-single-button .c-button {
+    width: calc(50% - 7.5px) !important;
+}
+
+
+.stat-number { font-size: 24px !important; }
+.stat-label { font-size: 8px !important; }
+
+
+.section-heading {
+    text-align: left !important;
+    margin-left: 0 !important;
 }
