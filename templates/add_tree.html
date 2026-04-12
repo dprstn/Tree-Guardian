@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add A Tree - Tree Guardian</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css')}}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css')}}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/add_tree.css')}}">
+
+</head>
+<body class="add-tree-body">
+
+
+    <div class="form-container">
+        <h1 class="add-tree-title">Add Tree</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <script>
+              window.addEventListener("load", function() {
+                {% for category, message in messages %}
+                  {% if category == "tree" %}
+                    alert({{ message|tojson }});
+                    window.location.href = "{{ url_for('homepage') }}";
+                  {% endif %}
+                {% endfor %}
+              });
+            </script>
+          {% endif %}
+        {% endwith %}
+        <form method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
+
+            <div class="add-tree-section">Basic Information</div>
+
+            <div class="form-group">
+                <label>Species <span>*</span></label>
+                <select name="species_id" required>
+                    <option value="">Select species...</option>
+                    {% for s in species_list %}
+                    <option value="{{ s.species_id }}">{{ s.species_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Age (years) <span>*</span></label>
+                    <!-- SECURITY FIX: Added min="0" -->
+                    <input type="number" name="age" min="0" max="500" placeholder="e.g. 5" required>
+                </div>
+                <div class="form-group">
+                    <label>Size (meters) <span>*</span></label>
+                    <input type="number" step="0.1" name="tree_size" min="0.1" max="500" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Health Status <span>*</span></label>
+                <select name="health_status" required>
+                    <option value="Healthy">Healthy</option>
+                    <option value="Needs Attention">Needs Attention</option>
+                    <option value="Critical">Critical</option>
+                </select>
+            </div>
+
+            <div class="add-tree-section">Location</div>
+            <button type="button" class="btn-map" onclick="openMap()">
+                <i class="fa-solid fa-location-dot"></i> Pick on Map
+            </button>
+            <div id="loc-status" class="location-status">
+                <span id="location-text">Select Location</span>
+
+                <span id="coords-display" style="font-weight: normal; color: #666; margin-left: 10px;"></span>
+            </div>
+
+            <input type="hidden" name="latitude" id="lat" required>
+            <input type="hidden" name="longitude" id="lng" required>
+
+            <div class="add-tree-section">Additional Information</div>
+
+            <div class="form-group">
+                <label>Planting Date</label>
+                <input type="date" name="planting_date" required>
+            </div>
+
+            <div class="form-group" style="margin-top:15px">
+                <label>Upload Photo</label>
+                <!-- ISSUE 5 FIX: Added accept filter -->
+                <input type="file" name="photo" accept="image/*">
+            </div>
+
+            <div class="form-group" style="margin-top:15px">
+                <label>Observartion Notes </label>
+                <textarea name="notes" rows="3" placeholder="Enter any observation notes..."></textarea>
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('homepage') }}" class="btn-pill">Cancel</a>
+                <button type="submit" class="btn-pill btn-submit-tree">Add Tree</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Map Modal -->
+    <div id="map-modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0">Select Location</h3>
+            <div id="map"></div>
+            <!-- UX FIX: Done button starts disabled -->
+            <button type="button" id="btn-done" class="btn-pill btn-submit-tree" disabled onclick="closeMap()">Done</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="{{ url_for('static', filename='js/map.js')}}"></script>
+    <script src="{{ url_for('static', filename='js/add_tree.js')}}"></script>
+
+</body>
+</html>

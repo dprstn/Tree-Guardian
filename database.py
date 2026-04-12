@@ -22,27 +22,21 @@ class Species(db.Model):
     species_id = db.Column(db.Integer, primary_key=True)
     species_name = db.Column(db.String(150), nullable=False)
 
-class Location(db.Model):
-    location_id = db.Column(db.Integer, primary_key=True)
-    location_name = db.Column(db.String(150), nullable=False)
-    description = db.Column(db.Text)
-    longitude =  db.Column(db.Float)
-    latitude = db.Column(db.Float)
+
 
 class Tree(db.Model):
     tree_id = db.Column(db.Integer, primary_key=True)
     species_id = db.Column(db.Integer, db.ForeignKey('species.species_id'), nullable=False)
-    location_id = db.Column(db.Integer, db.ForeignKey('location.location_id'), nullable=False)
-    planting_date = db.Column(db.Date)
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
+    planting_date = db.Column(db.Date, nullable=False)
     age = db.Column(db.Integer, nullable=False)
-    tree_size = db.Column(db.Integer, nullable=False)
+    tree_size = db.Column(db.Float, nullable=False)
     health_status = db.Column(db.String(50), nullable=False)
-    qr_code = db.Column(db.LargeBinary)
+    image_url = db.Column(db.String(255), nullable=True) #stores path like "upload/trees/abc123.jpg"
+    notes = db.Column(db.Text)
 
-class Tree_photo(db.Model):
-    photo_id = db.Column(db.Integer, primary_key=True)
-    tree_id = db.Column(db.Integer, db.ForeignKey('tree.tree_id'), nullable=False)
-    image_url = db.Column(db.String(255), nullable=False)
+
 
 class Observation_type(db.Model):
     observation_type_id = db.Column(db.Integer, primary_key=True)
@@ -55,16 +49,12 @@ class Observation(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)
     observation_type_id = db.Column(db.Integer, db.ForeignKey('observation_type.observation_type_id'), nullable=False)
     notes = db.Column(db.Text, nullable=False)
-    observed_time = db.Column(db.DateTime, default=datetime)
+    observed_time = db.Column(db.DateTime, default=datetime.utcnow)
 
-class ObservationPhoto(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    observation_id = db.Column(db.Integer, db.ForeignKey('observation.observation_id'), nullable=False)
-    image_url = db.Column(db.String(255), nullable=False)
 
 class Adoption(db.Model):
     adoption_id = db.Column(db.Integer, primary_key=True)
-    tree_id = db.Column(db.Integer, db.ForeignKey('tree.tree_id'), nullable=False)
+    tree_id = db.Column(db.Integer, db.ForeignKey('tree.tree_id'), nullable=False, unique=True)
     user_id = db.Column(db.Integer,db.ForeignKey('user.user_id'), nullable=False)
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
@@ -72,18 +62,17 @@ class Adoption(db.Model):
 class Event(db.Model):
     event_id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
-    location_id = db.Column(db.Integer, db.ForeignKey('location.location_id'))
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
     event_date = db.Column(db.DateTime, nullable=False)
 ###############################################################################
 class CareGuide(db.Model):
     care_guide_id = db.Column(db.Integer, primary_key=True)
     species_id = db.Column(db.Integer, db.ForeignKey('species.species_id'), nullable=False)
     title = db.Column(db.String(150), nullable=False)
+    url = db.Column(db.String(255)) # merged url link
 
-class CareGuideLink(db.Model):
-    link_id = db.Column(db.Integer, primary_key=True)
-    care_guide_id = db.Column(db.Integer, db.ForeignKey('care_guide.care_guide_id'), nullable=False)
-    url = db.Column(db.String(255), nullable=False)
+
 
 class LoyaltyLedger(db.Model):
     ledger_id = db.Column(db.Integer, primary_key=True)
@@ -98,7 +87,7 @@ class Badge(db.Model):
 class UserBadge(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), primary_key=True)
     badge_id = db.Column(db.Integer, db.ForeignKey('badge.badge_id'), primary_key=True)
-    awarded_at = db.Column(db.DateTime, default=datetime)
+    awarded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 

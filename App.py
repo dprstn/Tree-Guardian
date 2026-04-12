@@ -2,9 +2,14 @@ import re
 from flask import Flask, flash, render_template, request, redirect, url_for, session, get_flashed_messages
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date
-from database import db, User, Adoption, Observation, Observation_type, Tree
+from database import db, User, Adoption, Observation, Observation_type, Tree, Species
 from flask_mail import Mail, Message
 import secrets
+
+import os
+from werkzeug.utils import  secure_filename # more security for files
+import uuid
+
 app = Flask(__name__)
 app.secret_key = 'quiet_gardeners'
 
@@ -20,6 +25,13 @@ app.config['MAIL_USERNAME'] = 'quietgardenercollective@gmail.com'
 app.config['MAIL_PASSWORD'] = 'kotn ilrf ewoe qmvd'
 app.config['MAIL_DEFAULT_SENDER'] = 'quietgardenercollective@gmail.com'
 
+UPLOAD_FOLDER = 'static/uploads/trees'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+app.config['UPLOAD_FOLDER'] = "static/uploads/trees"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+
 
 mail = Mail(app)
 db.init_app(app)
@@ -28,26 +40,54 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
-    admin = User(first_name = "Preston",
-                 last_name = "De Sousa",
-                 username = "Preston",
-                 email="quietgardenercollective@gmail.com",
-                 role = "admin",
-                 dob=date(2004,10,4),
-                 hash_password=generate_password_hash("Preston123"),
-                 is_active=False,
-                 email_verified=True)
-
     existing_admin = User.query.filter_by(username="Preston").first()
 
+    if Species.query.count() == 0:
+        species_list = [
+            Species(species_name="Oak"),
+            Species(species_name="Maple"),
+            Species(species_name="Pine"),
+            Species(species_name="Birch"),
+            Species(species_name="Cherry")
+        ]
+        db.session.add_all(species_list)
+        db.session.commit()
+        print("All types of Species Added!")
+
     if not existing_admin:
+        admin = User(first_name = "Preston",
+                     last_name = "De Sousa",
+                     username = "Preston",
+                     email="quietgardenercollective@gmail.com",
+                     role = "admin",
+                     dob=date(2004,10,4),
+                     hash_password=generate_password_hash("Preston123"),
+                     is_active=False,
+                     email_verified=True)
+
         db.session.add(admin)
         db.session.commit()
-        print("Admin created!")
+        print("ADMIN CREATED !!")
+
+
+
+
+    else:
+        if existing_admin.role != "admin":
+            existing_admin.role = "admin"
+            db.session.commit()
+            print("------PRESTON ROLE UPDATED TO ADMIN")
+
+        else:
+            print("----------PRESTON IS ALREADY ADMIN")
+
 
 def isEmailValid(email):
     regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(regex, email) is not None
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/')
 def home():
@@ -172,8 +212,8 @@ def date_of_birth_is_valid(dob):
 
 @app.route('/verify/<token>')
 def verify_email(token):
-    get_flashed_messages()
-    session.clear()
+    #get_flashed_messages()
+    #session.clear()
     user = User.query.filter_by(verification_token=token).first()
     if user:
         time_diff = datetime.now() - user.token_created_at
@@ -193,6 +233,8 @@ def verify_email(token):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if session.get("is_active"):
+        return redirect(url_for('homepage'))
     if request.method == 'POST':
         username = request.form['username'].strip()
         password = request.form['password'].strip()
@@ -247,7 +289,7 @@ def admin_login():
         if admin and check_password_hash(admin.hash_password, password):
             # saving user session
             session['username'] = admin.username
-            session['role'] = admin.role
+            session['role'] = "admin"
             session['is_active'] = True
             admin.is_active = True
             db.session.commit()
@@ -263,11 +305,19 @@ def admin_login():
 
 @app.route('/homepage')
 def homepage():
-    if not session.get("is_active"):
+    if not session.get("is_active") or "username" not in session:
         flash("Please login first!", "danger")
         return redirect(url_for('login'))
 
+
     user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+    if user.role != "admin" and user.username == "Preston":
+        user.role = "admin"
+        db.session.commit()
+    print(f"DEBUG: user {user.username} has a role {user.role}")
 
     adopted_count = Adoption.query.filter_by(user_id=user.user_id).count()
 
@@ -300,7 +350,7 @@ def homepage():
         obs_count, wildlife_count, disease_count = 0, 0, 0
 
 
-    return render_template("homepage.html", username=user.username, role=user.role, adopted_count=adopted_count,
+    return render_template("homepage.html", username=user.username, role=user.role.lower() if user.role else 'user', adopted_count=adopted_count,
                            total_trees_in_db=total_trees_in_db,
                            obs_count=obs_count,
                            wildlife_count=wildlife_count,
@@ -338,6 +388,91 @@ def observation_details(obs_type):
     notes = query.all()
 
     return render_template("notes_list.html", notes=notes, title=title)
+
+@app.route('/add_tree', methods=['GET', 'POST'])
+def add_tree():
+    if not session.get("is_active") or session.get('role') != 'admin':
+        flash("Unathorised access!", "danger")
+        return redirect(url_for('homepage'))
+
+    if request.method == "POST":
+        species_id = request.form.get('species_id', '').strip()
+        age = request.form.get('age', '').strip()
+        tree_size = request.form.get('tree_size', '').strip()
+        health = request.form.get('health_status', '').strip()
+
+        latitude = request.form.get('latitude', '').strip()
+        longitude = request.form.get('longitude', '').strip()
+        planting_date = request.form.get('planting_date', '').strip()
+        notes = request.form.get('notes', '').strip()
+
+        if not all([species_id, age, tree_size, health, latitude, longitude]):
+            flash("All fields are required", "danger")
+            return redirect(url_for('add_tree'))
+
+        if not planting_date:
+            flash("Planting date is required", "danger")
+
+        try:
+            age = int(age)
+            size = float(tree_size)
+            latitude = float(latitude)
+            longitude = float(longitude)
+
+            if size <= 0 or age < 0:
+                raise  ValueError
+
+        except ValueError:
+            flash("Invalid numeric input (age, size, location)", "danger")
+            return redirect(url_for('add_tree'))
+
+        species = Species.query.get(int(species_id))
+        if not species:
+            flash("Invalid species selected", "danger")
+            return  redirect(url_for('add_tree'))
+
+        planting = None
+
+        if planting_date:
+            try:
+                planting =datetime.strptime(planting_date, '%Y-%m-%d').date()
+
+            except ValueError:
+                flash("Invalid date format", "danger")
+                return redirect(url_for('add_tree'))
+
+
+
+
+        file = request.files.get('photo')
+        image_url = None
+
+        if file and file.filename != '':
+            if not allowed_file(file.filename):
+                flash("Invalid file type. Only JPG/PNG allowed.", "danger")
+                return redirect(url_for('add_tree'))
+            filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            image_url = f"static/uploads/trees/{filename}"
+
+        try:
+            tree = Tree(
+                species_id = species.species_id, latitude=latitude, longitude=longitude,
+                age=age, tree_size=size, health_status=health,
+                image_url=image_url, notes=notes, planting_date=planting
+            )
+            db.session.add(tree)
+            db.session.commit()
+            flash("Tree added successfully!", "tree")
+            return redirect(url_for('add_tree'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Database error: {str(e)}", "danger")
+
+    return render_template('add_tree.html', species_list=Species.query.all())
+
+
 @app.route('/logout')
 def logout():
     username = session.get('username')

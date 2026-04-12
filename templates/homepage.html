@@ -23,6 +23,11 @@
             <a href="#" class="nav-item">
                 <i class="fa-solid fa-tree"></i> Local Trees
             </a>
+            {% if role.lower() == 'admin' %}
+            <a href="{{url_for('add_tree') }}" class="nav-item">
+                <i class="fa-solid fa-pen-to-square"></i> Add a Tree
+            </a>
+            {% endif %}
         </div>
     </nav>
 
@@ -32,6 +37,7 @@
         <h1 class="welcome-header">
             Welcome back, <span class="username-underline">{{ username }}</span>!
         </h1>
+        <p style="text-align: center; color: red;">DEBUG: Your role is: "{{ role }}"</p>
 
         <div class="container" style="text-align: center; color: #333; margin-top: 20px;">
             <p style="font-size: 16px; margin: 0 auto;">

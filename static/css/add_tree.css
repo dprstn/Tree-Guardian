@@ -1,0 +1,115 @@
+/* --- ADD TREE PAGE STYLES --- */
+:root {
+    --tree-green: #0b422a;
+    --tree-gold: #fbb034;
+    --tree-bg: #f4fdf4;
+}
+
+.add-tree-body {
+    background-color: var(--tree-bg) !important;
+}
+
+.form-container {
+    width: 100%;
+    max-width: 600px;
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    margin: 20px auto;
+}
+
+.add-tree-title {
+    color: var(--tree-green);
+    text-align: center;
+    margin-bottom: 5px;
+    font-weight: 800;
+}
+
+.add-tree-section {
+    font-weight: 800;
+    color: var(--tree-green);
+    margin: 25px 0 15px 0;
+    border-bottom: 2px solid var(--tree-bg);
+    padding-bottom: 5px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.form-group {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-size: 13px;
+    margin-bottom: 5px;
+    font-weight: 700;
+    color: #444;
+    text-align: left;
+}
+
+.form-group label span { color: var(--tree-gold); }
+
+.form-group select,
+.form-group input,
+.form-group textarea {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 15px;
+    background-color: #fff;
+}
+
+.btn-map {
+    background: white;
+    border: 1px solid var(--tree-green);
+    color: var(--tree-green);
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.location-status { font-size: 13px; color: #28a745; margin-top: 8px; font-weight: bold; text-align: left;}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 40px;
+}
+
+.btn-pill {
+    flex: 1;
+    padding: 18px;
+    border-radius: 50px;
+    font-weight: 800;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    text-align: center;
+    border: none;
+}
+
+.btn-submit-tree {
+    background-color: var(--tree-green);
+    color: var(--tree-gold);
+    border: 2px solid var(--tree-green);
+}
+
+.btn-submit-tree:hover {
+    background-color: var(--tree-gold);
+    color: var(--tree-green);
+    border-color: var(--tree-gold);
+}
