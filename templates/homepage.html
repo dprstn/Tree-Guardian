@@ -20,7 +20,7 @@
             <a href="{{ url_for('homepage') }}" class="nav-item">
                 <i class="fa-solid fa-house"></i> Home
             </a>
-            <a href="#" class="nav-item">
+            <a href="{{ url_for('local_trees') }}" class="nav-item">
                 <i class="fa-solid fa-tree"></i> Local Trees
             </a>
             {% if role.lower() == 'admin' %}

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore Local Trees</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+</head>
+<body class="explore-body">
+
+<nav class="mobile-nav">
+    <div class="nav-center">
+        <a href="{{ url_for('homepage') }}" class="nav-item">
+            <i class="fa-solid fa-house"></i> Home
+        </a>
+        <a href="{{ url_for('local_trees') }}" class="nav-item active">
+            <i class="fa-solid fa-tree"></i> Local Trees
+        </a>
+
+    </div>
+</nav>
+    <div class="explorer-container">
+        <h1 class="explore-header">
+            <span>Explore Local Trees</span>
+        </h1>
+
+        <!-- SEARCH BAR -->
+        <form method="GET" action="{{url_for('local_trees')}}">
+            <div class="search-bar-container">
+                <i class="fa fa-search search-icon"></i>
+                <input type="text" name="search" class="search-input" value="{{ search_query }}" placeholder="Search trees, species, or tag ID...">
+            </div>
+
+        <!-- FILTERS -->
+            <div class="filter-bar">
+
+    <!-- HEALTH FILTER -->
+                <div class="filter-dropdown">
+                    <button type="button" class="filter-pill">Health ▼</button>
+
+                    <div class="dropdown-content">
+                        <label>
+                            <input type="checkbox" name="health" value="Healthy"
+                            {% if 'Healthy' in request.args.getlist('health') %}checked{% endif %}> Healthy
+                        </label>
+
+                        <label>
+                            <input type="checkbox" name="health" value="Needs Attention"
+                            {% if 'Needs Attention' in request.args.getlist('health') %}checked{% endif %}> Needs Attention
+                        </label>
+                        <label>
+                            <input type="checkbox" name="health" value="Critical"
+                            {% if 'Critical' in request.args.getlist('health') %}checked{% endif %}> Critical
+                        </label>
+                    </div>
+                </div>
+
+                <!-- STATUS FILTER -->
+                <div class="filter-dropdown">
+                    <button type="button" class="filter-pill">Adopted ▼</button>
+
+                    <div class="dropdown-content">
+                        <label>
+                            <input type="checkbox" name="status" value="available"
+                            {% if 'available' in request.args.getlist('status') %}checked{% endif %}>
+                            Available
+                        </label>
+                        <label>
+                            <input type="checkbox" name="status" value="adopted"
+                            {% if 'adopted' in request.args.getlist('status') %}checked{% endif %}>
+                            Adopted
+                        </label>
+
+                    </div>
+                </div>
+
+                <!-- SORT -->
+                <div class="filter-dropdown">
+                    <button type="button" class="filter-pill">Sort ▼</button>
+
+                    <div class="dropdown-content">
+                        <label>
+                            <input type="radio" name="sort" value="newest"
+                            {% if request.args.get('sort', 'newest') == 'newest' %}checked{% endif %}>
+                            Newest
+                        </label>
+                       <label>
+                            <input type="radio" name="sort" value="oldest"
+                            {% if request.args.get('sort') == 'oldest' %}checked{% endif %}>
+                            Oldest
+                       </label>
+
+                       <label>
+                            <input type="radio" name="sort" value="age_oldest"
+                            {% if request.args.get('sort') == 'age_oldest' %}checked{% endif %}>
+                            Oldest by Age
+                       </label>
+
+                       <label>
+                            <input type="radio" name="sort" value="age_youngest"
+                            {% if request.args.get('sort') == 'age_youngest' %}checked{% endif %}>
+                            Youngest by Age
+                       </label>
+                    </div>
+                </div>
+
+            </div>
+
+            <button type="submit" class="apply-btn">Apply Filters</button>
+            <a href="{{ url_for('local_trees') }}" class="clear-btn">
+                Clear Filters
+            </a>
+
+        </form>
+
+                    <!-- TREE CARDS LIST -->
+        <div class="tree-list">
+            {% if trees|length == 0 %}
+                <p style="text-align:center; margin-top:40px;">
+                    No trees found matching your filters.
+                </p>
+            {% endif %}
+            {% for tree, species, adoption, user, obs_count in trees %}
+            <div class="tree-card">
+                <div class="tree-card-main">
+                    <!-- Left: Image -->
+                    {% if tree.image_url %}
+                        <img src="{{ url_for('static', filename=tree.image_url.split('static/')[-1]) }}" class="tree-img">
+                    {% else %}
+                        <div class="tree-img" style="display:flex; align-items:center; justify-content:center;">
+                            <i class="fa fa-tree" style="font-size:40px; color:#ccc;"></i>
+                        </div>
+                    {% endif %}
+
+                    <!-- Center: Details -->
+                    <div class="tree-info">
+                        <p style="font-size: 12px; color:#666">
+                            <i class=" fa fa-eye"></i> {{obs_count}} observations
+                        </p>
+                        <h3>{{ species.species_name }}</h3>
+                        <p class="tree-loc"><i class="fa fa-location-dot"></i> Tree ID #{{ tree.tree_id }}</p>
+
+                        <div class="status-row">
+                            <span class="badge badge-{{ 'healthy' if tree.health_status == 'Healthy' else 'needs' if tree.health_status == 'Needs Attention' else 'critical' }}">
+                                {{ tree.health_status }}
+                            </span>
+                            {% if not adoption %}
+                                <span class="badge badge-available">Available</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="tree-meta">
+                            <span><i class="fa fa-ruler-vertical"></i> Size: {{ tree.tree_size }}m </span>;
+                            <span><i class="fa fa-calendar-check"></i> Age: {{ tree.age }} yrs </span>
+                            <i class="fa fa-seedling"></i>
+                            <span>
+                                Planted:
+
+                                {% if tree.planting_date %}
+                                    {{ tree.planting_date }}
+                                {% else %}
+                                    Unknown
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Right: QR Code -->
+                    <div class="qr-container">
+                        <p class="tag-id">TAG #{{ tree.tree_id }}</p>
+                        <img src="{{ url_for('generate_qr', tree_id=tree.tree_id) }}" class="qr-img">
+
+                    </div>
+                </div>
+
+                <!-- Footer: Adoption Logic -->
+                <div class="adoption-bar">
+                    <div class="adopter-info">
+                        {% if adoption and user %}
+                            <i class="fa fa-user-check" style="color:#0b422a;"></i> Adopted by <strong>{{ user.username}}</strong>
+                        {% else %}
+                            <i class="fa fa-circle-dot" style="color:#fbb034;"></i> Available to adopt
+                        {% endif %}
+                    </div>
+                    <a href="{{ url_for ('tree_detail', tree_id=tree.tree_id) }}" class="btn-view">view details<i class="fa fa-chevron-right"></i></a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+<script>
+document.querySelectorAll(".filter-pill").forEach(btn => {
+    btn.addEventListener("click", function () {
+        this.parentElement.classList.toggle("active");
+    });
+});
+
+
+// Close dropdown when clicking outside
+document.addEventListener("click", function(e) {
+    document.querySelectorAll(".filter-dropdown").forEach(drop => {
+        if (!drop.contains(e.target)) {
+            drop.classList.remove("active");
+        }
+    });
+});
+</script>
+
+</body>
+</html>

@@ -1,9 +1,12 @@
+import io
 import re
-from flask import Flask, flash, render_template, request, redirect, url_for, session, get_flashed_messages
+from flask import Flask, flash, render_template, request, redirect, url_for, session, get_flashed_messages, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date
 from database import db, User, Adoption, Observation, Observation_type, Tree, Species
 from flask_mail import Mail, Message
+from sqlalchemy import or_, func
+import qrcode
 import secrets
 
 import os
@@ -29,6 +32,8 @@ UPLOAD_FOLDER = 'static/uploads/trees'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 app.config['UPLOAD_FOLDER'] = "static/uploads/trees"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+BASE_URL = os.environ.get("BASE_URL", "https://127.0.0.1:5000")
 
 
 
@@ -472,7 +477,112 @@ def add_tree():
 
     return render_template('add_tree.html', species_list=Species.query.all())
 
+@app.route('/qr/<int:tree_id>')
 
+def generate_qr(tree_id):
+    url = f"{BASE_URL}/tree/{tree_id}"
+
+    qr = qrcode.QRCode(box_size=10, border=2)
+    qr.add_data(url)
+    qr.make(fit=True) #QR is optimised auto-adjusted
+
+    img = qr.make_image(fill_color='#0b422a', back_color="white") # dark green plus white background
+
+    img_io = io.BytesIO()
+    img.save(img_io, 'PNG')
+    img_io.seek(0)
+    return send_file(img_io, mimetype="image/png")
+
+@app.route('/local_trees')
+def local_trees():
+    if not session.get("is_active"):
+        return redirect(url_for('login'))
+
+    # request.args gets data from query string (? search = oak)
+    search_query = request.args.get('search', '')
+    health_filters = request.args.getlist('health')
+    status_filters = request.args.getlist('status')
+    species_filter = request.args.get('species', '')
+    sort_order = request.args.get('sort', 'newest')
+
+    #Join the data for the filters
+
+    # Query multiple tables at onece
+    #Tree to display Trees data and so on
+
+
+    ###############################
+    # from all the tables in the species get all these tables (Tree, Species, Adoption, User)
+    # and specially select from Tree so each tree joins with the species
+    # = JOIN species ON tree.species_id = species.species_id
+
+    # outerjoin(Adoption) fetch all the trees even when they are not adopted
+    # so it outerjoins Adoption.user_id = User.user_id
+
+    query = db.session.query(Tree, Species, Adoption, User, func.count(Observation.observation_id).label("obs_count"))\
+        .select_from(Tree)\
+        .join(Species)\
+        .outerjoin(Adoption)\
+        .outerjoin(User)\
+        .outerjoin(Observation, Tree.tree_id== Observation.tree_id)\
+        .group_by(Tree.tree_id)
+
+    if search_query:
+        # ilike mworks like regex matches the most characters
+        filters = [Species.species_name.ilike(f'%{search_query}%')]
+
+        # if user searches by the tree_id
+        if search_query.isdigit():
+            filters.append(Tree.tree_id == int(search_query))
+
+        query = query.filter(or_(*filters)) # the OR condition matches any filters
+
+    if health_filters:
+        query = query.filter(Tree.health_status.in_(health_filters))
+
+    if species_filter:
+
+        query = query.filter(Tree.species_id == int(species_filter))
+
+    if status_filters: #here
+        if 'available' in status_filters and 'adopted' not in status_filters:
+
+            query = query.filter(Adoption.adoption_id.is_(None))
+            # if the adoption id is null then its available
+        elif 'adopted' in status_filters and 'available' not in status_filters:
+            query = query.filter(Adoption.adoption_id.is_not(None))
+
+
+
+    if sort_order == 'oldest':
+        query = query.order_by(Tree.tree_id.asc())
+
+    elif sort_order == 'newest':
+        query = query.order_by(Tree.tree_id.desc())
+
+    elif sort_order == "age_oldest":
+        query = query.order_by(Tree.age.desc())
+
+    elif sort_order == "age_youngest":
+        query = query.order_by(Tree.age.asc())
+
+    #returns list of all results:
+
+    trees = query.all()
+
+    all_species = Species.query.all()
+
+    return render_template('local_trees.html',
+                           trees=trees,
+                           all_species=all_species,
+                           search_query=search_query
+                           )
+
+
+
+@app.route('/tree/<int:tree_id>')
+def tree_detail(tree_id):
+    return f"Tree details page for tree {tree_id}"
 @app.route('/logout')
 def logout():
     username = session.get('username')
