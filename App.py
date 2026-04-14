@@ -2,7 +2,7 @@ import io
 import re
 from flask import Flask, flash, render_template, request, redirect, url_for, session, get_flashed_messages, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from database import db, User, Adoption, Observation, Observation_type, Tree, Species
 from flask_mail import Mail, Message
 from sqlalchemy import or_, func
@@ -582,7 +582,118 @@ def local_trees():
 
 @app.route('/tree/<int:tree_id>')
 def tree_detail(tree_id):
-    return f"Tree details page for tree {tree_id}"
+    if not session.get("is_active"):
+        return redirect(url_for('login'))
+
+    tree_data = db.session.query(Tree, Species).join(Species).filter(Tree.tree_id == tree_id).first_or_404()
+    tree, species = tree_data
+
+    adoption_data = db.session.query(Adoption, User).outerjoin(User, Adoption.user_id == User.user_id).filter(Adoption.tree_id == tree_id).first()
+
+    if adoption_data:
+        adoption, adopted_user = adoption_data
+
+    else:
+        adoption, adopted_user = None, None
+
+    #fetching observations with user info and type
+    observations = db.session.query(Observation, User, Observation_type)\
+        .join(User, Observation.user_id == User.user_id)\
+        .join(Observation_type, Observation.observation_type_id == Observation_type.observation_type_id)\
+        .filter(Observation.tree_id == tree_id)\
+        .order_by(Observation.observed_time.desc()).all()
+
+    obs_count = db.session.query(func.count(Observation.observation_id))\
+                .filter(Observation.tree_id == tree_id).scalar()
+
+    return render_template('tree_detail.html',
+                           tree=tree,
+                           species=species,
+                           adoption=adoption,
+                           adopted_user=adopted_user,
+                           observations=observations,
+                           obs_count=obs_count)
+
+
+@app.route('/adopt_tree/<int:tree_id>', methods=['POST'])
+def adopt_tree(tree_id):
+    if not session.get("is_active"):
+        return redirect(url_for('login'))
+
+    user = User.query.filter_by(username=session['username']).first()
+
+    existing =  Adoption.query.filter_by(tree_id=tree_id).first()
+
+
+    if not existing:
+
+        new_adoption = Adoption(
+            tree_id=tree_id,
+            user_id=user.user_id,
+            start_date=date.today(),
+            end_date=date.today() + timedelta(days=365)
+
+        )
+        db.session.add(new_adoption)
+        db.session.commit()
+
+
+    return  redirect(url_for('tree_detail', tree_id=tree_id))
+
+@app.route('/add_observation/<int:tree_id>', methods=['POST'])
+def add_observation(tree_id):
+    if not session.get("is_active"): return redirect(url_for('login'))
+    user = User.query.filter_by( username=session['username']).first()
+    if not user:
+        return redirect(url_for('login'))
+
+    obs_type_val = request.form.get('obs_type')
+
+    notes = request.form.get('notes', '').strip()
+
+
+
+    if not notes:
+        flash("Please provide notes.", 'danger')
+        return redirect(url_for('tree_detail', tree_id=tree_id))
+
+    obs_type_obj = Observation_type.query.filter_by(observation_category=obs_type_val).first()
+
+    if not obs_type_obj:
+        obs_type_obj = Observation_type(observation_category=obs_type_val, observation_report=obs_type_val)
+        db.session.add(obs_type_obj)
+        db.session.commit()
+
+    image_path = None
+    file = request.files.get('photo')
+    if file and file.filename:
+        filename = secure_filename(file.filename)
+        file_path = f"uploads/trees/{filename}"
+        full_path = os.path.join('static', file_path)
+        file.save(full_path)
+        image_path = file_path
+    new_obs = Observation(
+        tree_id = tree_id,
+        user_id = user.user_id,
+        observation_type_id=obs_type_obj.observation_type_id,
+        notes=notes,
+        image_url=image_path,
+        observed_time=datetime.now()
+
+    )
+
+
+
+
+    db.session.add(new_obs)
+    db.session.commit()
+    if image_path:
+        tree = Tree.query.get(tree_id)
+        if tree:
+            tree.image_url = image_path
+            db.session.commit()
+    flash("Observation added to the community feed!", "success")
+    return redirect(url_for('tree_detail', tree_id=tree_id))
 @app.route('/logout')
 def logout():
     username = session.get('username')

@@ -49,6 +49,7 @@ class Observation(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)
     observation_type_id = db.Column(db.Integer, db.ForeignKey('observation_type.observation_type_id'), nullable=False)
     notes = db.Column(db.Text, nullable=False)
+    image_url = db.Column(db.String(255), nullable=True)
     observed_time = db.Column(db.DateTime, default=datetime.utcnow)
 
 

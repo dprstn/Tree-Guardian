@@ -980,3 +980,152 @@ body, html {
         padding: 14px;
     }
 }
+/* --- Tree Details Styles --- */
+.details-container {
+    max-width: 800px;
+    margin: 40px auto;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.hero-img {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+}
+
+.details-content {
+    padding: 20px;
+    text-align: left;
+}
+
+.species-header {
+    font-size: 32px;
+    color: #0b422a;
+    margin: 0;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.info-box {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.info-box i { color: #0b422a; margin-bottom: 5px; }
+.info-val { font-weight: 800; font-size: 16px; }
+.info-lab { font-size: 10px; color: #888; text-transform: uppercase; }
+
+/* Adoption Section */
+.adoption-status-box {
+    background: #f4f8f6;
+    border: 1px solid #dfeee7;
+    padding: 20px;
+    border-radius: 15px;
+    margin: 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-adopt {
+    background-color: #0b422a;
+    color: #fbb034;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 50px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.btn-adopt:disabled {
+    background-color: #ccc;
+    color: #fff;
+    cursor: not-allowed;
+}
+
+/* Observation Feed */
+.obs-form {
+    background: #fff;
+    border: 1px solid #eee;
+    padding: 20px;
+    border-radius: 15px;
+    margin-top: 30px;
+}
+
+.obs-card {
+    display: flex;
+    gap: 15px;
+    padding: 15px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.user-avatar {
+    width: 40px; height: 40px;
+    background: #0b422a;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.obs-details { flex: 1; }
+.obs-meta { font-size: 12px; color: #999; margin-bottom: 5px; }
+.type-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    font-weight: bold;
+}
+.btn-adopt {
+    background: #0b422a;
+    color: #fbb034;
+    border: none;
+    padding: 12px;
+    border-radius: 25px;
+    font-weight: 700;
+    width: 100%;
+}
+.btn-adopt:hover:not(:disabled) {
+    background-color: #0d5234;
+    transform: translateY(-1px);
+}
+.obs-card {
+    margin-bottom: 10px;
+}
+/* --- MOBILE FIXES --- */
+@media (max-width: 768px) {
+    .adoption-status-box {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .btn-adopt {
+        width: 100%;
+        text-align: center;
+    }
+}
+@media (max-width: 500px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 500px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ species.species_name }} - Details</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+</head>
+<body class="explore-body">
+
+    <div class="details-container">
+        <!-- Top Image -->
+        {% if tree.image_url %}
+            <!-- Bug Fixed image was not displaying on the tree details page -->
+            <img src="{{ url_for('static', filename='uploads/trees/' + tree.image_url.split('/')[-1]) }}" class="hero-img">
+        {% else %}
+            <div class="hero-img" style="background:#ddd; display:flex; align-items:center; justify-content:center;">
+                <i class="fa fa-tree fa-4x" style="color:#bbb;"></i>
+            </div>
+        {% endif %}
+
+        <div class="details-content">
+            <a href="{{ url_for('local_trees') }}" style="color:#0b422a; font-weight:700;"><i class="fa fa-arrow-left"></i> Back to Explorer</a>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                <h1 class="species-header">{{ species.species_name }}</h1>
+                <span class="badge badge-{{ 'healthy' if tree.health_status == 'Healthy' else 'needs' if tree.health_status == 'Needs Attention' else 'critical' }}">{{ tree.health_status }}</span>
+            </div>
+            <p style="color:#666; margin:0;">Location: Tree ID #{{ tree.tree_id }}</p>
+
+            <!-- Map Section -->
+            <div id="map" style="height: 200px; border-radius:15px; margin:20px 0;"></div>
+
+            <!-- Stats Grid -->
+            <div class="info-grid">
+                <div class="info-box"><i class="fa fa-calendar"></i><span class="info-val">{{ tree.age }} yrs</span><span class="info-lab">Age</span></div>
+                <div class="info-box"><i class="fa fa-ruler-vertical"></i><span class="info-val">{{ tree.tree_size }}m</span><span class="info-lab">Size</span></div>
+                <div class="info-box"><i class="fa fa-comments"></i><span class="info-val">{{ obs_count }}</span><span class="info-lab">Observations</span></div>
+                <div class="info-box"><i class="fa fa-seedling"></i><span class="info-val">{{ tree.planting_date if tree.planting_date else 'N/A' }}</span><span class="info-lab">Planted</span></div>
+            </div>
+
+            <!-- Adoption Status -->
+            <div class="adoption-status-box">
+                <div>
+                    <h4 style="margin:0; font-size:14px;">Adoption Status</h4>
+                    {% if adoption and adopted_user %}
+                        <p style="margin:0; color:#0b422a;">Adopted by <strong>{{ adopted_user.username }}</strong>
+                        </p>
+                    {% else %}
+                        <p style="margin:0; color:#888;">Available for adoption</p>
+                    {% endif %}
+                </div>
+                {% if not adoption %}
+                    <form action="{{ url_for('adopt_tree', tree_id=tree.tree_id) }}" method="POST">
+
+                        <button type="submit" class="btn-adopt">+ Adopt Tree </button>
+
+                    </form>
+                {% else %}
+                    <button class="btn-adopt" disabled>Adopted</button>
+                {% endif %}
+
+            </div>
+
+            <hr>
+
+            <!-- Add Observation Form -->
+            <div class="obs-form">
+                <h3 style="color:#0b422a; margin-top:0;">Add Observation</h3>
+                <form action="{{ url_for('add_observation', tree_id=tree.tree_id) }}" method="POST" enctype="multipart/form-data">
+                    <input type="file" name="photo" accept="image/*" style="margin-top:10px;">
+                    <div style="margin-bottom:10px;">
+                        <label style="font-size:12px; font-weight:bold;">Type:</label><br>
+                        <select name="obs_type" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                            <option value="Wildlife">Wildlife Sighting</option>
+                            <option value="Disease">Health Alert / Disease</option>
+                        </select>
+                    </div>
+                    <textarea name="notes" placeholder="Write your observation notes..." style="width:100%; height:80px; padding:10px; border-radius:10px; border:1px solid #ddd;"></textarea>
+                    <button type="submit" class="btn-adopt">Submit Observation</button>
+                </form>
+            </div>
+
+            <!-- Observation List -->
+            <h3 style="margin-top:40px; color:#0b422a;">Community Observations</h3>
+            <div class="obs-list">
+                {% if not observations %}
+                    <p style="text-align:center; color:#888; margin-top:10px;">
+                        No observations yet.
+                    </p>
+                {% endif %}
+                {% for obs, user, o_type in observations %}
+                <div class="obs-card">
+                    <div class="user-avatar">{{ user.username[0]|upper }}</div>
+                    <div class="obs-details">
+                        <div class="obs-meta">
+                            <strong>{{ user.username }}</strong> • {{ obs.observed_time.strftime('%d %b %Y') }}
+                            <span class="type-tag">{{ o_type.observation_category or o_type.observation_report }}</span>
+                        </div>
+                        <p style="margin:0; font-size:14px; color:#444;">{{ obs.notes }}</p>
+                        {% if obs.image_url %}
+                            <img src="{{ url_for('static', filename=obs.image_url) }}"
+                                 style="width:100%; border-radius:10px; margin-top:8px;">
+                        {% endif %}
+
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map', {zoomControl: true, dragging: true, scrollWheelZoom: false}).setView([{{ tree.latitude }}, {{ tree.longitude }}], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+        var treeIcon = L.icon({
+        iconUrl: "https://cdn-icons-png.flaticon.com/512/490/490091.png",
+        iconSize: [35, 35],
+        iconAnchor: [17,35]
+        });
+        L.marker([{{ tree.latitude }}, {{ tree.longitude }}], {icon: treeIcon}).addTo(map);
+    </script>
+</body>
+</html>
