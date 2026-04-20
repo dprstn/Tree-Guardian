@@ -28,6 +28,19 @@
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
                 <h1 class="species-header">{{ species.species_name }}</h1>
+                {% if tree.tags %}
+                <div class="tag-list">
+
+                    <span class="tag-label">
+                        <i class="fa fa-hashtag"></i> Tags:
+
+                    </span>
+
+                    {% for t in tree.tags %}
+                        <span class="tag-pill">#{{ t.name }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 <span class="badge badge-{{ 'healthy' if tree.health_status == 'Healthy' else 'needs' if tree.health_status == 'Needs Attention' else 'critical' }}">{{ tree.health_status }}</span>
             </div>
             <p style="color:#666; margin:0;">Location: Tree ID #{{ tree.tree_id }}</p>
@@ -88,6 +101,17 @@
                         </select>
                     </div>
                     <textarea name="notes" placeholder="Write your observation notes..." style="width:100%; height:80px; padding:10px; border-radius:10px; border:1px solid #ddd;"></textarea>
+
+                    <div style="margin-top:8px;">
+                        <label style="font-size:12px; font-weight:bold; color:#555;">
+                            Tags (optional) — use # and separate with spaces
+                        </label>
+
+                        <input type="text"
+                               name="tags"
+                               placeholder="#disease #dry #fungus"
+                               style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                    </div>
                     <button type="submit" class="btn-adopt">Submit Observation</button>
                 </form>
             </div>

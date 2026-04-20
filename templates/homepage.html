@@ -23,6 +23,10 @@
             <a href="{{ url_for('local_trees') }}" class="nav-item">
                 <i class="fa-solid fa-tree"></i> Local Trees
             </a>
+            <a href="{{ url_for('events') }}" class="nav-item">
+              <i class="nav-icon-img"></i> Events
+
+            </a>
             {% if role.lower() == 'admin' %}
             <a href="{{url_for('add_tree') }}" class="nav-item">
                 <i class="fa-solid fa-pen-to-square"></i> Add a Tree

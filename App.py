@@ -3,7 +3,7 @@ import re
 from flask import Flask, flash, render_template, request, redirect, url_for, session, get_flashed_messages, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta
-from database import db, User, Adoption, Observation, Observation_type, Tree, Species
+from database import db, User, Adoption, Observation, Observation_type, Tree, Species, Tag, TreeTag
 from flask_mail import Mail, Message
 from sqlalchemy import or_, func
 import qrcode
@@ -499,11 +499,12 @@ def local_trees():
         return redirect(url_for('login'))
 
     # request.args gets data from query string (? search = oak)
-    search_query = request.args.get('search', '')
+    search_query = request.args.get('search', '').strip().lower()
     health_filters = request.args.getlist('health')
     status_filters = request.args.getlist('status')
     species_filter = request.args.get('species', '')
     sort_order = request.args.get('sort', 'newest')
+    tag_filter = request.args.get('tag')
 
     #Join the data for the filters
 
@@ -519,7 +520,7 @@ def local_trees():
     # outerjoin(Adoption) fetch all the trees even when they are not adopted
     # so it outerjoins Adoption.user_id = User.user_id
 
-    query = db.session.query(Tree, Species, Adoption, User, func.count(Observation.observation_id).label("obs_count"))\
+    query = db.session.query(Tree, Species, Adoption, User, func.coalesce(func.count(Observation.observation_id), 0).label("obs_count"))\
         .select_from(Tree)\
         .join(Species)\
         .outerjoin(Adoption)\
@@ -527,15 +528,34 @@ def local_trees():
         .outerjoin(Observation, Tree.tree_id== Observation.tree_id)\
         .group_by(Tree.tree_id)
 
-    if search_query:
+
+
+    if tag_filter:
+        query = query.join(Tree.tags).filter(Tag.name == tag_filter)
+
+    elif search_query:
+
+        if search_query.startswith("#") and len(search_query) > 1:
+            tag_name = search_query.replace("#", "")
+            query = query.join(Tree.tags) \
+                .filter(Tag.name.ilike(f"%{tag_name}%"))
+
         # ilike mworks like regex matches the most characters
-        filters = [Species.species_name.ilike(f'%{search_query}%')]
 
-        # if user searches by the tree_id
-        if search_query.isdigit():
-            filters.append(Tree.tree_id == int(search_query))
+        else:
+            filters = [Species.species_name.ilike(f'%{search_query}%')]
 
-        query = query.filter(or_(*filters)) # the OR condition matches any filters
+            # if user searches by the tree_id
+            if search_query.isdigit():
+
+                filters.append(Tree.tree_id == int(search_query))
+
+            query = query.outerjoin(Tree.tags).filter(
+                or_(
+                    *filters,
+                    Tag.name.ilike(f"%{search_query}%")
+                )
+            ) # the OR condition matches any filters
 
     if health_filters:
         query = query.filter(Tree.health_status.in_(health_filters))
@@ -568,14 +588,18 @@ def local_trees():
 
     #returns list of all results:
 
+    query = query.distinct()
     trees = query.all()
+
+    all_tags = Tag.query.all()
 
     all_species = Species.query.all()
 
     return render_template('local_trees.html',
                            trees=trees,
                            all_species=all_species,
-                           search_query=search_query
+                           search_query=search_query,
+                           all_tags=all_tags
                            )
 
 
@@ -652,6 +676,10 @@ def add_observation(tree_id):
     obs_type_val = request.form.get('obs_type')
 
     notes = request.form.get('notes', '').strip()
+    import re
+    tags_input = request.form.get('tags', '')
+    tags = re.findall(r"#(\w+)", tags_input.lower())
+
 
 
 
@@ -693,6 +721,22 @@ def add_observation(tree_id):
 
     )
 
+    for tag_name in tags:
+        tag = Tag.query.filter_by(name=tag_name).first()
+
+        if not tag:
+            tag = Tag(name=tag_name)
+            db.session.add(tag)
+            db.session.commit()
+
+        existing = TreeTag.query.filter_by(
+            tree_id=tree_id,
+            tag_id=tag.tag_id
+        ).first()
+
+        if not existing:
+            db.session.add(TreeTag(tree_id=tree_id, tag_id=tag.tag_id))
+
 
 
 
@@ -728,6 +772,13 @@ def edit_tree(tree_id):
         return redirect(url_for('tree_detail', tree_id=tree_id))
 
     return render_template('edit_tree.html', tree=tree, species_list=Species.query.all())
+@app.route('/events')
+def events():
+    if not session.get("is_active"):
+        return redirect(url_for('login'))
+
+    return render_template('events.html')
+
 @app.route('/logout')
 def logout():
     username = session.get('username')

@@ -760,8 +760,9 @@ body, html {
 
 .tree-card-main {
     display: flex;
-    padding: 15px;
-    gap: 15px;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 20px;
 }
 
 .tree-img {
@@ -774,7 +775,9 @@ body, html {
 
 .tree-info {
     flex: 1;
-    text-align: left;
+    min-width: 0; /* prevents overflow push */
+    display: flex;
+    flex-direction: column;
 }
 
 .tree-info h3 {
@@ -811,8 +814,11 @@ body, html {
 .qr-container {
     width: 100px;
     text-align: center;
-}
 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
 .qr-img {
     width: 100%;
     border: 1px solid #eee;
@@ -881,13 +887,14 @@ body, html {
 }
 
 .tree-meta {
-    font-size: 13px;
-    color: #444;
-    font-weight: 700;
     display: flex;
+    font-size: 12px;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 5px;
+    gap: 12px;
+
+    margin-top: 6px;
+
+    font-weight: 600;
 }
 .explore-header {
     color: #042c1b;
@@ -945,7 +952,8 @@ body, html {
 
     /* QR below content */
     .qr-container {
-        width: 100%;
+        flex-shrink: 0;
+        text-align: center;
         margin-top: 10px;
     }
 
@@ -1202,8 +1210,11 @@ body, html {
 }
 .tree-card-main {
     display: flex;
+    justify-content: space-between;
+    padding: 15px;
     gap: 15px;
-    align-items: center;
+    align-items: flex-start;
+
 }
 
 /* MOBILE */
@@ -1219,7 +1230,7 @@ body, html {
     }
 
     .qr-container {
-        width: 100%;
+        width: 100px;
         text-align: center;
     }
 }
@@ -1268,11 +1279,16 @@ color: #0b422a;
 font-weight: 600;
 
 .tree-img-container {
+
+
+
+
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
 }
-
 /* keep same size as your card */
 .tree-img {
     width: 120px;
@@ -1309,27 +1325,23 @@ font-weight: 600;
 }
 
 .btn-clear {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+    background: #fbb034;   /* gold */
+    color: #0b422a;        /* dark green */
 
     padding: 8px 14px;
-    margin-left: 10px;
-
     border-radius: 20px;
 
-    background: #f5f5f5;
-    color: #0b422a;
+    font-weight: 700;
+    text-decoration: none;   /* REMOVE underline */
 
-    font-weight: 600;
-    font-size: 13px;
+    border: none;
+    cursor: pointer;
 
-    text-decoration: none;
     transition: 0.2s;
 }
 
 .btn-clear:hover {
-    background: #e6e6e6;
+    background: #ffcc66;
 }
 .btn-back {
     display: inline-flex;
@@ -1360,4 +1372,111 @@ font-weight: 600;
         font-size: 12px;
         padding: 6px 12px;
     }
+}
+/* TAG PILLS */
+.tag-pill {
+    display: inline-block;
+
+    padding: 5px 10px;
+    border-radius: 14px;
+
+    background: #eef5f1;
+    color: #0b422a;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    border: 1px solid #cfe3d8;
+
+    white-space: nowrap;
+}
+
+/* hover */
+.tag-pill:hover {
+    background: #e2f0ea;
+}
+.tag-section {
+    margin-top: 6px;
+
+}
+
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-width: 520px;
+}
+.active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    margin: 12px 0;
+
+    padding: 10px 14px;
+
+    background: #fff8e6;
+    border: 1px solid #fbb034;
+    border-radius: 10px;
+}
+.tag-pill.active {
+    background: #0b422a;
+    color: #fbb034;
+    border: none;
+}
+.tag-expand-row {
+    margin: 10px 0 15px 0;
+    padding: 12px;
+
+    border-radius: 12px;
+
+    background: #f9f9f9;
+    border: 1px solid #eee;
+}
+@media (max-width: 768px) {
+
+    .tag-pill {
+        font-size: 11px;
+        padding: 5px 10px;
+    }
+
+    .tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+
+        max-width: 100%;
+    }
+
+    .active-filters {
+        gap: 6px;
+    }
+
+    .tag-expand-row {
+        padding: 10px;
+    }
+}
+.tag-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0b422a;
+    margin-right: 6px;
+}
+@media (min-width: 1024px) {
+
+    .tag-pill {
+        font-size: 13px;
+        padding: 6px 14px;
+    }
+
+    .tag-expand-row {
+        padding: 15px;
+    }
+}
+.nav-item i {
+    color: #0b422a; /* your dark green */
+}
+.nav-item.active i {
+    color: #fbb034; /* gold highlight */
 }

@@ -1,3 +1,5 @@
+from enum import unique
+
 from  flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
@@ -35,6 +37,7 @@ class Tree(db.Model):
     health_status = db.Column(db.String(50), nullable=False)
     image_url = db.Column(db.String(255), nullable=True) #stores path like "upload/trees/abc123.jpg"
     notes = db.Column(db.Text)
+    tags = db.relationship('Tag', secondary='tree_tag', backref='trees')
 
 
 
@@ -66,6 +69,15 @@ class Event(db.Model):
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
     event_date = db.Column(db.DateTime, nullable=False)
+
+class Tag(db.Model):
+    tag_id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+
+class TreeTag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tree_id = db.Column(db.Integer, db.ForeignKey('tree.tree_id'))
+    tag_id = db.Column(db.Integer, db.ForeignKey('tag.tag_id'))
 ###############################################################################
 class CareGuide(db.Model):
     care_guide_id = db.Column(db.Integer, primary_key=True)

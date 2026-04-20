@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Events</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="explore-body">
+
+<nav class="mobile-nav">
+    <div class="nav-center">
+        <a href="{{ url_for('homepage') }}" class="nav-item">
+            <i class="fa-solid fa-house"></i> Home
+        </a>
+
+        <a href="{{ url_for('local_trees') }}" class="nav-item">
+            <i class="fa-solid fa-tree"></i> Local Trees
+        </a>
+
+        <a href="{{ url_for('events') }}" class="nav-item active">
+            <img src="{{ url_for('static', filename='icons/megaphone.png') }}" class="nav-icon-img">
+            Events
+        </a>
+    </div>
+</nav>
+
+<div class="explorer-container">
+    <h1 class="explore-header">Events</h1>
+
+    <p style="text-align:center; margin-top:40px;">
+        No events yet.
+    </p>
+</div>
+
+</body>
+</html>

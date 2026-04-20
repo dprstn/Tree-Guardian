@@ -29,7 +29,7 @@
         <form method="GET" action="{{url_for('local_trees')}}">
             <div class="search-bar-container">
                 <i class="fa fa-search search-icon"></i>
-                <input type="text" name="search" class="search-input" value="{{ search_query }}" placeholder="Search trees, species, or tag ID...">
+                <input type="text" name="search" class="search-input" value="{{ search_query }}" placeholder="Search trees, species, tag ID or #tags ...">
             </div>
 
         <!-- FILTERS -->
@@ -75,6 +75,23 @@
                     </div>
                 </div>
 
+                <div class="filter-dropdown">
+                    <button type="button" class="filter-pill">Tags ▼</button>
+
+                    <div class="dropdown-content">
+                        {% if all_tags %}
+                        {% for tag in all_tags %}
+
+                            <label>
+                                <input type="radio" name="tag" value="{{ tag.name }}"
+                                {% if request.args.get('tag') == tag.name %}checked{% endif %}>
+                                #{{ tag.name }}
+                            </label>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+
                 <!-- SORT -->
                 <div class="filter-dropdown">
                     <button type="button" class="filter-pill">Sort ▼</button>
@@ -114,6 +131,38 @@
             </a>
 
         </form>
+        {% if request.args.get('tag') or request.args.getlist('health')| length > 0 or request.args.getlist('status') %}
+        <div class="active-filters">
+
+            {% if request.args.get('tag') %}
+                <span class="tag-pill">#{{ request.args.get('tag') }}</span>
+            {% endif %}
+
+            {% for h in request.args.getlist('health') %}
+                <span class="tag-pill">{{ h }}</span>
+            {% endfor %}
+
+            {% for s in request.args.getlist('status') %}
+                <span class="tag-pill">{{ s }}</span>
+            {% endfor %}
+
+        </div>
+        {% endif %}
+        {% if all_tags %}
+        <div class="tag-expand-row">
+
+            <p style="font-weight:600; margin-bottom:8px;">Tags:</p>
+
+            <div class="tag-list">
+                {% for tag in all_tags %}
+                    <a href="{{ url_for('local_trees', tag=tag.name) }}" class="tag-pill">
+                        #{{ tag.name }}
+                    </a>
+                {% endfor %}
+            </div>
+
+        </div>
+        {% endif %}
 
                     <!-- TREE CARDS LIST -->
         <div class="tree-list">
@@ -147,7 +196,7 @@
                     <!-- Center: Details -->
                     <div class="tree-info">
 
-                        <p style="font-size: 12px; color:#666">
+                        <p style="font-size: 14px; color:#666">
                             <i class=" fa fa-eye"></i> {{obs_count}} observations
                         </p>
                         <h3>{{ species.species_name }}</h3>
@@ -162,7 +211,9 @@
                             {% endif %}
                         </div>
 
+
                         <div class="tree-meta">
+
                             <span><i class="fa fa-ruler-vertical"></i> Size: {{ tree.tree_size }}m </span>
                             <span><i class="fa fa-calendar-check"></i> Age: {{ tree.age }} yrs </span>
                             <i class="fa fa-seedling"></i>
@@ -176,7 +227,18 @@
                                 {% endif %}
                             </span>
                         </div>
+
+                        {% if tree.tags %}
+                        <div class="tag-section">
+                            <div class="tag-list">
+                                {% for t in tree.tags %}
+                                    <span class="tag-pill">#{{t.name }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
+
 
                     <!-- Right: QR Code -->
                     <div class="qr-container">
