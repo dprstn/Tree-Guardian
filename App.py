@@ -647,6 +647,8 @@ def add_observation(tree_id):
     if not user:
         return redirect(url_for('login'))
 
+    health_update = request.form.get('health_status')
+
     obs_type_val = request.form.get('obs_type')
 
     notes = request.form.get('notes', '').strip()
@@ -663,6 +665,15 @@ def add_observation(tree_id):
         obs_type_obj = Observation_type(observation_category=obs_type_val, observation_report=obs_type_val)
         db.session.add(obs_type_obj)
         db.session.commit()
+
+    if obs_type_val == "Disease" and not health_update:
+        flash("Please select a health status for health alerts.", "danger")
+        return redirect(url_for('tree_detail', tree_id=tree_id))
+
+
+    if obs_type_val == "Disease" and health_update:
+        tree = Tree.query.get(tree_id)
+        tree.health_status = health_update
 
     image_path = None
     file = request.files.get('photo')
@@ -694,6 +705,29 @@ def add_observation(tree_id):
             db.session.commit()
     flash("Observation added to the community feed!", "success")
     return redirect(url_for('tree_detail', tree_id=tree_id))
+
+
+@app.route('/edit_tree/<int:tree_id>', methods=['GET', 'POST'])
+def edit_tree(tree_id):
+    if session.get("role") != "admin":
+        return  redirect(url_for('local_trees'))
+
+    tree = Tree.query.get_or_404(tree_id)
+
+    if request.method == "POST":
+        tree.tree_size = request.form.get('tree_size')
+        tree.age = request.form.get('age')
+        tree.health_status = request.form.get('health_status')
+
+        tree.latitude = request.form.get('latitude')
+        tree.longitude = request.form.get('longitude')
+
+        db.session.commit()
+
+        flash('Tree updated successfully!', "success")
+        return redirect(url_for('tree_detail', tree_id=tree_id))
+
+    return render_template('edit_tree.html', tree=tree, species_list=Species.query.all())
 @app.route('/logout')
 def logout():
     username = session.get('username')

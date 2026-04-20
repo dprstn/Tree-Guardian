@@ -108,8 +108,9 @@
             </div>
 
             <button type="submit" class="apply-btn">Apply Filters</button>
-            <a href="{{ url_for('local_trees') }}" class="clear-btn">
-                Clear Filters
+            <a href="{{ url_for('local_trees') }}" class="btn-clear">
+                <i class="fa fa-rotate-left"></i>Clear Filters
+
             </a>
 
         </form>
@@ -124,17 +125,28 @@
             {% for tree, species, adoption, user, obs_count in trees %}
             <div class="tree-card">
                 <div class="tree-card-main">
-                    <!-- Left: Image -->
-                    {% if tree.image_url %}
-                        <img src="{{ url_for('static', filename=tree.image_url.split('static/')[-1]) }}" class="tree-img">
-                    {% else %}
-                        <div class="tree-img" style="display:flex; align-items:center; justify-content:center;">
-                            <i class="fa fa-tree" style="font-size:40px; color:#ccc;"></i>
-                        </div>
-                    {% endif %}
+<!-- LEFT: IMAGE + EDIT BUTTON -->
+                    <div class="tree-img-container">
+
+                        {% if tree.image_url %}
+                            <img src="{{ url_for('static', filename=tree.image_url.split('static/')[-1]) }}" class="tree-img">
+                        {% else %}
+                            <div class="tree-img" style="display:flex; align-items:center; justify-content:center;">
+                                <i class="fa fa-tree" style="font-size:40px; color:#ccc;"></i>
+                            </div>
+                        {% endif %}
+
+                        {% if session.get('role') == 'admin' %}
+                            <a href="{{ url_for('edit_tree', tree_id=tree.tree_id) }}" class="btn-edit-under">
+                                <i class="fa fa-pen"></i> Edit Tree
+                            </a>
+                        {% endif %}
+
+                    </div>
 
                     <!-- Center: Details -->
                     <div class="tree-info">
+
                         <p style="font-size: 12px; color:#666">
                             <i class=" fa fa-eye"></i> {{obs_count}} observations
                         </p>
@@ -151,14 +163,14 @@
                         </div>
 
                         <div class="tree-meta">
-                            <span><i class="fa fa-ruler-vertical"></i> Size: {{ tree.tree_size }}m </span>;
+                            <span><i class="fa fa-ruler-vertical"></i> Size: {{ tree.tree_size }}m </span>
                             <span><i class="fa fa-calendar-check"></i> Age: {{ tree.age }} yrs </span>
                             <i class="fa fa-seedling"></i>
                             <span>
                                 Planted:
 
                                 {% if tree.planting_date %}
-                                    {{ tree.planting_date }}
+                                    {{ tree.planting_date.strftime('%d %b %Y') }}
                                 {% else %}
                                     Unknown
                                 {% endif %}
@@ -170,7 +182,20 @@
                     <div class="qr-container">
                         <p class="tag-id">TAG #{{ tree.tree_id }}</p>
                         <img src="{{ url_for('generate_qr', tree_id=tree.tree_id) }}" class="qr-img">
+                        <div class="qr-actions">
+                            <a href="{{ url_for('generate_qr', tree_id=tree.tree_id) }}"
+                               download="tree_{{ tree.tree_id }}_qr.png"
+                               class="qr-icon-btn"
+                               title="Download QR">
+                                <i class="fa fa-download"></i>
+                            </a>
 
+                                <button onclick="printQR('{{ url_for('generate_qr', tree_id=tree.tree_id) }}')"
+                                        class="qr-icon-btn"
+                                        title="Print QR">
+                                    <i class="fa fa-print"></i>
+                                </button>
+                        </div>
                     </div>
                 </div>
 
@@ -206,6 +231,60 @@ document.addEventListener("click", function(e) {
     });
 });
 </script>
+<script>
+function printQR(imageUrl) {
+    const printWindow = window.open('', '_blank');
 
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Print QR Code</title>
+                <style>
+                    body {
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                        margin: 0;
+                        font-family: sans-serif;
+                    }
+                    img {
+                        width: 250px;
+                        margin-bottom: 20px;
+                    }
+                    button {
+                        padding: 10px 20px;
+                        border: none;
+                        background: #0b422a;
+                        color: #fff;
+                        border-radius: 5px;
+                        cursor: pointer;
+                    }
+                </style>
+            </head>
+            <body>
+                <img src="${imageUrl}" />
+
+                <!-- Fallback button -->
+                <button onclick="window.close()">Close</button>
+
+                <script>
+                    window.onload = function() {
+                        window.focus();
+                        window.print();
+                    };
+
+                    window.onafterprint = function() {
+                        window.close();
+                    };
+                <\/script>
+            </body>
+        </html>
+    `);
+
+    printWindow.document.close();
+}
+</script>
 </body>
 </html>

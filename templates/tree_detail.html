@@ -22,7 +22,9 @@
         {% endif %}
 
         <div class="details-content">
-            <a href="{{ url_for('local_trees') }}" style="color:#0b422a; font-weight:700;"><i class="fa fa-arrow-left"></i> Back to Explorer</a>
+            <a href="{{ url_for('local_trees') }}" class="btn-back">
+                <i class="fa fa-arrow-left"></i>Back to Explorer
+            </a>
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
                 <h1 class="species-header">{{ species.species_name }}</h1>
@@ -73,9 +75,16 @@
                     <input type="file" name="photo" accept="image/*" style="margin-top:10px;">
                     <div style="margin-bottom:10px;">
                         <label style="font-size:12px; font-weight:bold;">Type:</label><br>
-                        <select name="obs_type" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                        <select name="obs_type" id="obs_type" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
                             <option value="Wildlife">Wildlife Sighting</option>
                             <option value="Disease">Health Alert / Disease</option>
+                        </select>
+                        <select name="health_status" id="health_status"
+                                style="width:100%; padding:10px; border-radius:8px; border: 1px solid #ddd; margin-top: 10px; display:none;">
+                            <option value=""> Select Health Status</option>
+                            <option value="Healthy">Healthy</option>
+                            <option value="Needs Attention">Needs Attention</option>
+                            <option value="Critical">Critical</option>
                         </select>
                     </div>
                     <textarea name="notes" placeholder="Write your observation notes..." style="width:100%; height:80px; padding:10px; border-radius:10px; border:1px solid #ddd;"></textarea>
@@ -125,5 +134,23 @@
         });
         L.marker([{{ tree.latitude }}, {{ tree.longitude }}], {icon: treeIcon}).addTo(map);
     </script>
+    <script>
+const obsType = document.getElementById("obs_type");
+const healthSelect = document.getElementById("health_status");
+
+if (obsType) {
+    obsType.addEventListener("change", function() {
+        if (this.value === "Disease") {
+            healthSelect.style.display = "block";
+            healthSelect.required = true;
+        } else {
+            healthSelect.style.display = "none";
+            healthSelect.required = false;
+            healthSelect.value = "";
+        }
+    });
+}
+</script>
+
 </body>
 </html>
