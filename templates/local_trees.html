@@ -163,6 +163,87 @@
 
         </div>
         {% endif %}
+        {% if session.get('role') == 'admin' %}
+        <div class="io-toolbar">
+
+            {% if tree_count is defined and tree_count > 0 %}
+                <a href="{{ url_for('export_trees') }}"
+                   class="btn-io btn-io--export"
+                   title="Download all trees as CSV">
+                    <span class="btn-io-icon"><i class="fa fa-file-arrow-down"></i></span>
+                    Export CSV
+                </a>
+            {% else %}
+                <span class="btn-io btn-io--export btn-io--disabled"
+                      title="No trees available to export">
+                    <span class="btn-io-icon"><i class="fa fa-file-arrow-down"></i></span>
+                    Export CSV
+                </span>
+            {% endif %}
+
+            <form method="POST"
+                  action="{{ url_for('import_trees') }}"
+                  enctype="multipart/form-data"
+                  id="importForm">
+                <label class="btn-io btn-io--import" title="Upload a CSV to import trees">
+                    <span class="btn-io-icon"><i class="fa fa-file-arrow-up"></i></span>
+                    Import CSV
+                    <input type="file"
+                           name="csv_file"
+                           accept=".csv"
+                           onchange="document.getElementById('importForm').submit()">
+                </label>
+            </form>
+
+        </div>
+        {% if session.get('import_feedback') %}
+        <div class="import-feedback" id="importFeedback">
+
+            <div class="feedback-header">
+                <div class="feedback-header-left">
+                    <i class="fa fa-circle-check"></i>
+                    Import Completed
+                </div>
+                <button class="feedback-dismiss" onclick="dismissFeedback()" title="Dismiss">
+                    <i class="fa fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="feedback-summary">
+                <span class="success">
+                    <i class="fa fa-circle-check"></i>
+                    {{ session.import_feedback.success }} added
+                </span>
+                <span class="skipped">
+                    <i class="fa fa-triangle-exclamation"></i>
+                    {{ session.import_feedback.skipped }} skipped
+                </span>
+            </div>
+
+            {% if session.import_feedback.errors %}
+            <div class="feedback-errors">
+                <strong>Issues found</strong>
+                <ul>
+                    {% for err in session.import_feedback.errors %}
+                        <li>
+                            <i class="fa fa-circle-xmark"></i>
+                            {{ err }}
+                        </li>
+                    {% endfor %}
+                </ul>
+                {% if session.import_feedback.more_errors > 0 %}
+                    <p class="feedback-more">...and {{ session.import_feedback.more_errors }} more</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        </div>
+        {% set _ = session.pop('import_feedback', None) %}
+        {% endif %}
+        {% endif %}
+
+
+
 
                     <!-- TREE CARDS LIST -->
         <div class="tree-list">
@@ -346,6 +427,22 @@ function printQR(imageUrl) {
     `);
 
     printWindow.document.close();
+}
+// Auto-dismiss import feedback after 6 seconds
+const fb = document.getElementById('importFeedback');
+if (fb) {
+    setTimeout(() => {
+        fb.classList.add('dismissing');
+        setTimeout(() => fb.remove(), 500);
+    }, 6700);
+}
+
+function dismissFeedback() {
+    const fb = document.getElementById('importFeedback');
+    if (fb) {
+        fb.classList.add('dismissing');
+        setTimeout(() => fb.remove(), 500);
+    }
 }
 </script>
 </body>

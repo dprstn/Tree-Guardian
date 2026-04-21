@@ -1,3 +1,4 @@
+import csv
 import io
 import re
 from flask import Flask, flash, render_template, request, redirect, url_for, session, get_flashed_messages, send_file
@@ -35,8 +36,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 BASE_URL = os.environ.get("BASE_URL", "https://127.0.0.1:5000")
 
-
-
+REQUIRED_COLUMNS = {
+    'species_name', 'latitude', 'longitude',
+    'planting_date', 'age', 'tree_size', 'health_status'
+}
+VALID_HEALTH = {'Healthy', 'Needs Attention', 'Critical'}
+MAX_ERROR_DISPLAY = 10
 
 mail = Mail(app)
 db.init_app(app)
@@ -594,12 +599,14 @@ def local_trees():
     all_tags = Tag.query.all()
 
     all_species = Species.query.all()
+    tree_count = len(trees)
 
     return render_template('local_trees.html',
                            trees=trees,
                            all_species=all_species,
                            search_query=search_query,
-                           all_tags=all_tags
+                           all_tags=all_tags,
+                           tree_count=tree_count
                            )
 
 
@@ -779,6 +786,204 @@ def events():
 
     return render_template('events.html')
 
+@app.route('/export_trees')
+def export_trees():
+    if session.get('role') != "admin":
+        flash("Unauthorised access!", "danger")
+        return redirect(url_for('local_trees'))
+    trees = db.session.query(Tree, Species)\
+        .join(Species, Tree.species_id == Species.species_id).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        'species_name', 'latitude', 'longitude',
+        'planting_date', 'age', 'tree_size',
+        'health_status', 'notes', 'tags'
+    ])
+
+    for tree, species in trees:
+        tag_names = ' '.join(f"#{t.name}" for t in tree.tags) if tree.tags else ''
+        writer.writerow([
+            species.species_name,
+            tree.latitude,
+            tree.longitude,
+            tree.planting_date.strftime('%Y-%m-%d') if tree.planting_date else '',
+            tree.age,
+            tree.tree_size,
+            tree.health_status,
+            tree.notes or '',
+            tag_names
+        ])
+    output.seek(0)
+    return send_file(
+        io.BytesIO(output.getvalue().encode('utf-8')),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=f'trees_export_{date.today().strftime("%Y%m%d")}.csv'
+    )
+
+@app.route('/import_trees', methods=['POST'])
+def import_trees():
+    if session.get('role') != 'admin':
+        flash("Unauthorised access!", "danger")
+        return redirect(url_for('local_trees'))
+
+    file = request.files.get('csv_file')
+    if not file or not file.filename.endswith('.csv'):
+        flash("Please upload a valid .csv file.", "danger")
+        return redirect(url_for('local_trees'))
+
+    file_data = file.read()
+    if len(file_data) > 2 * 1024 * 1024:
+        flash("File too large (max 2MB)", "danger")
+        return redirect(url_for('local_trees'))
+
+
+
+
+
+    success_count = 0
+    skipped_count = 0
+    errors = []
+
+    try:
+        stream = io.StringIO(file_data.decode('utf-8', errors='ignore'))
+        reader = csv.DictReader(stream)
+
+
+        if not reader.fieldnames:
+            flash("CSV file is empty or has no headers.", "danger")
+            return redirect(url_for('local_trees'))
+
+        actual_cols = {c.strip().lower() for c in reader.fieldnames}
+        missing = {c for c in REQUIRED_COLUMNS if c not in actual_cols}
+        if missing:
+            flash(f"CSV is missing required columns: {', '.join(sorted(missing))}", "danger")
+            return redirect(url_for('local_trees'))
+
+        for row_num, row in enumerate(reader, start=2):
+
+            row = {k.strip().lower(): (v.strip() if v else '') for k, v in row.items()}
+
+
+            missing_fields = [f for f in REQUIRED_COLUMNS if not row.get(f)]
+            if missing_fields:
+                errors.append(f"Row {row_num}: missing {', '.join(missing_fields)} – skipped")
+                skipped_count += 1
+                continue
+
+
+            species_name = row['species_name']
+            species = Species.query.filter(
+                Species.species_name.ilike(species_name)
+            ).first()
+            if not species:
+                species = Species(species_name=species_name)
+                db.session.add(species)
+                db.session.flush()
+
+
+            try:
+                latitude = float(row['latitude'])
+                longitude = float(row['longitude'])
+                age = int(row['age'])
+                tree_size = float(row['tree_size'])
+                if tree_size <= 0 or age < 0:
+                    raise ValueError
+            except ValueError:
+                errors.append(f"Row {row_num}: invalid numeric value – skipped")
+                skipped_count += 1
+
+                continue
+
+
+            try:
+                planting_date = datetime.strptime(row['planting_date'], '%Y-%m-%d').date()
+            except ValueError:
+                errors.append(f"Row {row_num}: bad planting_date format (need YYYY-MM-DD) – skipped")
+                skipped_count += 1
+
+                continue
+
+
+            health = row['health_status']
+            if health not in VALID_HEALTH:
+                errors.append(
+                    f"Row {row_num}: health_status '{health}' not valid "
+                    f"(use Healthy / Needs Attention / Critical) – skipped"
+                )
+                skipped_count += 1
+
+                continue
+
+
+            existing = Tree.query.join(Species).filter(
+                Species.species_name.ilike(species_name),
+                Tree.latitude == latitude,
+                Tree.longitude == longitude,
+                Tree.planting_date == planting_date
+            ).first()
+
+            if existing:
+                skipped_count += 1
+                errors.append(f"Row {row_num}: duplicate entry (Tree ID #{existing.tree_id}) – skipped")
+                continue
+
+
+            new_tree = Tree(
+                species_id=species.species_id,
+                latitude=latitude,
+                longitude=longitude,
+                planting_date=planting_date,
+                age=age,
+                tree_size=tree_size,
+                health_status=health,
+                notes=row.get('notes', '')
+            )
+            db.session.add(new_tree)
+            db.session.flush()
+
+
+            raw_tags = row.get('tags', '')
+            if raw_tags:
+                tag_names = raw_tags.replace(',', ' ').split()
+                for tag_name in tag_names:
+                    tag_name = tag_name.replace('#', '').lower().strip()
+                    if not tag_name:
+                        continue
+
+                    tag = Tag.query.filter_by(name=tag_name).first()
+                    if not tag:
+                        tag = Tag(name=tag_name)
+                        db.session.add(tag)
+                        db.session.flush()
+
+                    link = TreeTag.query.filter_by(
+                        tree_id=new_tree.tree_id, tag_id=tag.tag_id
+                    ).first()
+                    if not link:
+                        db.session.add(TreeTag(tree_id=new_tree.tree_id, tag_id=tag.tag_id))
+
+            success_count += 1
+
+        db.session.commit()
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Import failed: {str(e)}", "danger")
+        return redirect(url_for('local_trees'))
+
+
+    more_errors = max(0, len(errors) - MAX_ERROR_DISPLAY)
+    session['import_feedback'] = {
+        'success': success_count,
+        'skipped': skipped_count,
+        'errors': errors[:MAX_ERROR_DISPLAY],
+        'more_errors': more_errors
+    }
+    return redirect(url_for('local_trees'))
 @app.route('/logout')
 def logout():
     username = session.get('username')
