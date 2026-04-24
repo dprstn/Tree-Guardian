@@ -79,6 +79,15 @@ with app.app_context():
         db.session.commit()
         print("ADMIN CREATED !!")
 
+    if Observation_type.query.count() == 0:
+        obs_types = [
+            Observation_type(observation_category="Wildlife", observation_report="Wildlife Sighting"),
+            Observation_type(observation_category="Disease", observation_report="Health Alert / Disease"),
+        ]
+        db.session.add_all(obs_types)
+        db.session.commit()
+        print("Observation types seeded!")
+
 
 
 
@@ -353,7 +362,7 @@ def homepage():
     ######################## DISEASE REPORT ############################
         disease_count = db.session.query(Observation).join(Observation_type).filter(
             Observation.tree_id.in_(my_tree_ids),
-            Observation_type.observation_report == "Disease"
+            Observation_type.observation_category == "Disease"
         ).count()
     else:
         # If user hasn't adopted any trees yet then set everything to 0
@@ -389,7 +398,7 @@ def observation_details(obs_type):
         title = "Wildlife Sightings"
 
     elif obs_type == "disease":
-        query = query.filter(Observation_type.observation_report == "Disease")
+        query = query.filter(Observation_type.observation_category == "Disease")
         title = "Health Alerts"
 
     else:
@@ -773,10 +782,30 @@ def edit_tree(tree_id):
         tree.latitude = request.form.get('latitude')
         tree.longitude = request.form.get('longitude')
 
+        # photo handling
+
+        photo = request.files.get('photo')
+        if photo and photo.filename:
+            # delete old photo from disk if it exists
+            if tree.image_url:
+                old_path = os.path.join('static', tree.image_url.split('static/')[-1])
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+
+            # save new photo
+            ext = os.path.splitext(secure_filename(photo.filename))[1]
+            filename = f"{uuid.uuid4().hex}{ext}"
+            save_path = os.path.join('static', 'uploads', 'trees', filename)
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            photo.save(save_path)
+            tree.image_url = f"static/uploads/trees/{filename}"
+
+
+
         db.session.commit()
 
         flash('Tree updated successfully!', "success")
-        return redirect(url_for('tree_detail', tree_id=tree_id))
+        return redirect(url_for('local_trees', tree_id=tree_id))
 
     return render_template('edit_tree.html', tree=tree, species_list=Species.query.all())
 @app.route('/events')
@@ -800,22 +829,70 @@ def export_trees():
     writer.writerow([
         'species_name', 'latitude', 'longitude',
         'planting_date', 'age', 'tree_size',
-        'health_status', 'notes', 'tags'
+        'health_status', 'notes', 'tags',
+        'obs_notes', 'obs_type','obs_image','image_url', 'adopted_user'
     ])
 
+    # paste this temporarily before your loop
+
+
     for tree, species in trees:
+        print(f"Looking for obs with tree_id={tree.tree_id}, type={type(tree.tree_id)}")
+
+        observations = Observation.query \
+            .filter(Observation.tree_id == tree.tree_id) \
+            .order_by(Observation.observed_time.asc()) \
+            .all()
+
+        print(f"observations = {observations}")
+
+
+        adoption = Adoption.query.filter_by(tree_id=tree.tree_id).first()
+        adopted_user = ''
+        if adoption:
+            user = User.query.get(adoption.user_id)
+            if user:
+                adopted_user = user.username
         tag_names = ' '.join(f"#{t.name}" for t in tree.tags) if tree.tags else ''
-        writer.writerow([
-            species.species_name,
-            tree.latitude,
-            tree.longitude,
-            tree.planting_date.strftime('%Y-%m-%d') if tree.planting_date else '',
-            tree.age,
-            tree.tree_size,
-            tree.health_status,
-            tree.notes or '',
-            tag_names
-        ])
+        if observations:
+            # one row per observation
+            for obs in observations:
+                writer.writerow([
+                    species.species_name,
+                    tree.latitude,
+                    tree.longitude,
+                    tree.planting_date.strftime('%Y-%m-%d') if tree.planting_date else '',
+                    tree.age,
+                    tree.tree_size,
+                    tree.health_status,
+                    tree.notes or '',
+                    tag_names,
+                    obs.notes,
+                    obs.observation_type_id,
+                    obs.image_url or '',
+                    tree.image_url or '',
+                    adopted_user
+                ])
+        else:
+            # no observations — still export the tree with blank obs fields
+            writer.writerow([
+                species.species_name,
+                tree.latitude,
+                tree.longitude,
+                tree.planting_date.strftime('%Y-%m-%d') if tree.planting_date else '',
+                tree.age,
+                tree.tree_size,
+                tree.health_status,
+                tree.notes or '',
+                tag_names,
+                '',
+                '',
+                tree.image_url or '',
+                adopted_user
+            ])
+
+
+
     output.seek(0)
     return send_file(
         io.BytesIO(output.getvalue().encode('utf-8')),
@@ -825,6 +902,7 @@ def export_trees():
     )
 
 @app.route('/import_trees', methods=['POST'])
+
 def import_trees():
     if session.get('role') != 'admin':
         flash("Unauthorised access!", "danger")
@@ -840,10 +918,6 @@ def import_trees():
         flash("File too large (max 2MB)", "danger")
         return redirect(url_for('local_trees'))
 
-
-
-
-
     success_count = 0
     skipped_count = 0
     errors = []
@@ -851,7 +925,6 @@ def import_trees():
     try:
         stream = io.StringIO(file_data.decode('utf-8', errors='ignore'))
         reader = csv.DictReader(stream)
-
 
         if not reader.fieldnames:
             flash("CSV file is empty or has no headers.", "danger")
@@ -864,9 +937,8 @@ def import_trees():
             return redirect(url_for('local_trees'))
 
         for row_num, row in enumerate(reader, start=2):
-
+            print(f"\n--- Processing Row {row_num} ---")
             row = {k.strip().lower(): (v.strip() if v else '') for k, v in row.items()}
-
 
             missing_fields = [f for f in REQUIRED_COLUMNS if not row.get(f)]
             if missing_fields:
@@ -874,16 +946,12 @@ def import_trees():
                 skipped_count += 1
                 continue
 
-
             species_name = row['species_name']
-            species = Species.query.filter(
-                Species.species_name.ilike(species_name)
-            ).first()
+            species = Species.query.filter(Species.species_name.ilike(species_name)).first()
             if not species:
                 species = Species(species_name=species_name)
                 db.session.add(species)
                 db.session.flush()
-
 
             try:
                 latitude = float(row['latitude'])
@@ -895,29 +963,24 @@ def import_trees():
             except ValueError:
                 errors.append(f"Row {row_num}: invalid numeric value – skipped")
                 skipped_count += 1
-
                 continue
 
-
+            date_str = row['planting_date']
             try:
-                planting_date = datetime.strptime(row['planting_date'], '%Y-%m-%d').date()
+                planting_date = datetime.strptime(date_str, '%Y-%m-%d').date()
             except ValueError:
-                errors.append(f"Row {row_num}: bad planting_date format (need YYYY-MM-DD) – skipped")
-                skipped_count += 1
-
-                continue
-
+                try:
+                    planting_date = datetime.strptime(date_str, '%d/%m/%Y').date()
+                except ValueError:
+                    errors.append(f"Row {row_num}: bad planting_date format – skipped")
+                    skipped_count += 1
+                    continue
 
             health = row['health_status']
             if health not in VALID_HEALTH:
-                errors.append(
-                    f"Row {row_num}: health_status '{health}' not valid "
-                    f"(use Healthy / Needs Attention / Critical) – skipped"
-                )
+                errors.append(f"Row {row_num}: health_status '{health}' not valid – skipped")
                 skipped_count += 1
-
                 continue
-
 
             existing = Tree.query.join(Species).filter(
                 Species.species_name.ilike(species_name),
@@ -926,10 +989,49 @@ def import_trees():
                 Tree.planting_date == planting_date
             ).first()
 
+            # if tree already exists just add the observation, don't create a new tree
             if existing:
-                skipped_count += 1
+                obs_notes = row.get('obs_notes', '').strip("()").replace("'", "").replace('"', '').strip()
+                obs_type_raw = row.get('obs_type', '').strip()
+
+                if obs_notes and obs_type_raw and obs_type_raw.isdigit():
+                    obs_type_id = int(obs_type_raw)
+                    obs_type_exists = Observation_type.query.filter_by(observation_type_id=obs_type_id).first()
+
+                    if obs_type_exists:
+                        user = User.query.filter_by(username=session.get('username')).first()
+
+                        duplicate_obs = Observation.query.filter_by(
+                            tree_id=existing.tree_id,
+                            notes=obs_notes,
+                            observation_type_id=obs_type_id
+                        ).first()
+
+                        if not duplicate_obs and user:
+                            new_obs = Observation(
+                                tree_id=existing.tree_id,
+                                notes=obs_notes,
+                                observed_time=datetime.utcnow(),
+                                user_id=user.user_id,
+                                observation_type_id=obs_type_id,
+                                image_url=row.get('obs_image', '').strip() or None
+                            )
+                            db.session.add(new_obs)
+                            print(f"Observation added to existing tree {existing.tree_id}")
+                        else:
+                            print(f"Duplicate observation skipped for tree {existing.tree_id}")
+
+                skipped_count += 1  # ← inside if existing
                 errors.append(f"Row {row_num}: duplicate entry (Tree ID #{existing.tree_id}) – skipped")
-                continue
+                continue  # skip creating a new tree
+            image_url = row.get('image_url', '').strip()
+
+            # only use it if the file actually exists on disk
+            if image_url:
+                full_path = os.path.join('static', image_url)
+                if not os.path.exists(full_path):
+                    print(f"Row {row_num}: image file not found on disk — image skipped")
+                    image_url = ''
 
 
             new_tree = Tree(
@@ -940,12 +1042,56 @@ def import_trees():
                 age=age,
                 tree_size=tree_size,
                 health_status=health,
-                notes=row.get('notes', '')
+                notes=row.get('notes', ''),
+                image_url=image_url
             )
             db.session.add(new_tree)
             db.session.flush()
 
+            # --- OBSERVATION ---
+            obs_notes = row.get('obs_notes', '').strip("()").replace("'", "").replace('"', '').strip()
+            obs_type_raw = row.get('obs_type', '').strip()
 
+            if obs_notes and obs_type_raw and obs_type_raw.isdigit():
+                obs_type_id = int(obs_type_raw)
+
+                # CHECK the obs_type_id actually exists in the database
+                obs_type_exists = Observation_type.query.filter_by(observation_type_id=obs_type_id).first()
+                print(f"obs_type_id={obs_type_id}, exists={obs_type_exists}")
+
+                if not obs_type_exists:
+                    print(f"Row {row_num}: observation_type_id {obs_type_id} does not exist in DB — skipping observation")
+                    errors.append(f"Row {row_num}: obs_type {obs_type_id} not found in database — observation skipped")
+                else:
+                    user = User.query.filter_by(username=session.get('username')).first()
+                    if user:
+                        new_obs = Observation(
+                            tree_id=new_tree.tree_id,
+                            notes=obs_notes,
+                            observed_time=datetime.utcnow(),
+                            user_id=user.user_id,
+                            observation_type_id=obs_type_id,
+                            image_url=row.get('obs_image', '').strip() or None
+                        )
+                        db.session.add(new_obs)
+                        print(f"Observation added for tree {new_tree.tree_id}")
+                    else:
+                        print(f"Row {row_num}: user not found in session — observation skipped")
+
+            # --- ADOPTION ---
+            adopted_username = row.get('adopted_user', '')
+            if adopted_username:
+                user = User.query.filter(User.username.ilike(adopted_username.strip())).first()
+                if user:
+                    new_adoption = Adoption(
+                        tree_id=new_tree.tree_id,
+                        user_id=user.user_id,
+                        start_date=date.today(),
+                        end_date=date.today().replace(year=date.today().year + 1)
+                    )
+                    db.session.add(new_adoption)
+
+            # --- TAGS ---
             raw_tags = row.get('tags', '')
             if raw_tags:
                 tag_names = raw_tags.replace(',', ' ').split()
@@ -953,28 +1099,30 @@ def import_trees():
                     tag_name = tag_name.replace('#', '').lower().strip()
                     if not tag_name:
                         continue
-
                     tag = Tag.query.filter_by(name=tag_name).first()
                     if not tag:
                         tag = Tag(name=tag_name)
                         db.session.add(tag)
                         db.session.flush()
-
-                    link = TreeTag.query.filter_by(
-                        tree_id=new_tree.tree_id, tag_id=tag.tag_id
-                    ).first()
+                    link = TreeTag.query.filter_by(tree_id=new_tree.tree_id, tag_id=tag.tag_id).first()
                     if not link:
                         db.session.add(TreeTag(tree_id=new_tree.tree_id, tag_id=tag.tag_id))
 
             success_count += 1
 
+        print("\n=== IMPORT SUMMARY ===")
+        print(f"Success: {success_count}")
+        print(f"Skipped: {skipped_count}")
+        for e in errors:
+            print(e)
+
         db.session.commit()
 
     except Exception as e:
         db.session.rollback()
+        print(f" IMPORT ERROR: {str(e)}")
         flash(f"Import failed: {str(e)}", "danger")
         return redirect(url_for('local_trees'))
-
 
     more_errors = max(0, len(errors) - MAX_ERROR_DISPLAY)
     session['import_feedback'] = {
