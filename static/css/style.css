@@ -1208,6 +1208,11 @@ body, html {
 
     text-decoration: none;
 }
+.tree-list {
+    /* Add padding to the top of the container so the first card's
+       flag has room to sit above it without hitting the search bar */
+    padding-top: 15px;
+}
 .tree-card-main {
     display: flex;
     justify-content: space-between;
@@ -2257,13 +2262,390 @@ font-weight: 600;
 .leaflet-popup-content { margin: 0 !important; width: 270px !important; }
 .leaflet-popup-tip-container { margin-top: -1px; }
 
-/* ─────────────────────────────────────────────────────
-   END MAP POPUP v2
-───────────────────────────────────────────────────── */
-/* ─────────────────────────────────────────────────────
-   END MAP
-───────────────────────────────────────────────────── */
 
-/* ─────────────────────────────────────────────────────
-   END IMPORT / EXPORT
-───────────────────────────────────────────────────── */
+/* ════════════════════════════════════════════════
+   ADD TO BOTTOM OF style.css
+   TREE CARD STATS ROW + SMART TAGS + MAP POPUP v2
+════════════════════════════════════════════════ */
+
+.tree-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.tree-card-header h3 { margin: 0 0 3px 0; }
+
+.badge-health {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.tree-stats-row {
+    display: flex;
+    border: 1px solid #ebebeb;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    background: #fafafa;
+}
+
+.tree-stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 4px 6px;
+    border-right: 1px solid #ebebeb;
+    gap: 3px;
+    min-width: 0;
+}
+
+.tree-stat:last-child  { border-right: none; }
+.tree-stat i           { font-size: 12px; color: #0b422a; }
+.tree-stat-val         { font-size: 11px; font-weight: 800; color: #0b422a; line-height: 1; text-align: center; word-break: break-word; }
+.tree-stat-lbl         { font-size: 9px; color: #fbb034; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1; }
+
+.tree-tags-wrap        { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
+.tree-tags-inner       { display: flex; flex-wrap: wrap; gap: 5px; overflow: hidden; max-height: 30px; transition: max-height 0.25s ease; }
+.tree-tags-inner.expanded { max-height: 200px; }
+.tag-hidden            { display: none; }
+
+.tag-more-btn {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 9px;
+    background: #0b422a;
+    color: #fbb034;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    width: fit-content;
+    transition: background 0.15s;
+}
+.tag-more-btn:hover { background: #083320; }
+
+/* ── Map popup card ── */
+.map-popup             { width: 270px; font-family: 'Sora', 'Open Sans', sans-serif; background: #fff; }
+.mp-img-wrap           { width: 100%; height: 130px; overflow: hidden; }
+.mp-img-wrap .map-popup-img      { width: 100%; height: 130px; object-fit: cover; display: block; }
+.mp-img-wrap .map-popup-img-placeholder { width: 100%; height: 130px; background: linear-gradient(135deg, #d4edda, #e8f5ee); display: flex; align-items: center; justify-content: center; color: #0b422a; font-size: 36px; }
+
+.mp-header-row         { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 10px 12px 0; }
+.mp-title-col          { flex: 1; min-width: 0; }
+.mp-species            { font-size: 15px; font-weight: 800; color: #111; margin: 0 0 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-location           { font-size: 11px; color: #888; margin: 0; display: flex; align-items: center; gap: 4px; }
+.mp-location i         { color: #0b422a; font-size: 11px; }
+
+.mp-health-badge       { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+.mp-health-badge.healthy  { background:#e8f5e9; color:#1b5e20; border:1px solid #c8e6c9; }
+.mp-health-badge.needs    { background:#fff8e1; color:#e65100; border:1px solid #ffe082; }
+.mp-health-badge.critical { background:#fdecea; color:#b71c1c; border:1px solid #f5c6cb; }
+.mp-health-badge i     { font-size: 11px; }
+
+.mp-body               { padding: 10px 12px 12px; }
+
+.mp-stats              { display: flex; border: 1px solid #ebebeb; border-radius: 8px; overflow: hidden; margin-bottom: 9px; background: #fafafa; }
+.mp-stat               { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 4px 6px; border-right: 1px solid #ebebeb; gap: 3px; }
+.mp-stat:last-child    { border-right: none; }
+.mp-stat i             { font-size: 13px; color: #0b422a; }
+.mp-stat-val           { font-size: 11px; font-weight: 800; color: #0b422a; line-height: 1; text-align: center; }
+.mp-stat-lbl           { font-size: 9px; color: #fbb034; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1; }
+
+.mp-adopted            { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; padding: 5px 8px; border-radius: 6px; margin-bottom: 8px; }
+.mp-adopted.adopted    { background:#e8f5e9; color:#1b5e20; }
+.mp-adopted.available  { background:#fff8e1; color:#b45309; }
+
+.mp-tag-section        { margin-bottom: 9px; }
+.mp-tags               { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.mp-tag                { font-size: 10px; font-weight: 600; padding: 2px 7px; background: #f0f7f3; border: 1px solid #c8ddd2; border-radius: 10px; color: #0b422a; }
+.mp-tag-more           { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; padding: 2px 8px; background: #0b422a; color: #fbb034; border: none; border-radius: 10px; cursor: pointer; transition: background 0.15s; }
+.mp-tag-more:hover     { background: #083320; }
+.mp-tag-extra          { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+
+.mp-qr-row             { display: flex; align-items: center; gap: 10px; padding: 7px 0; margin-bottom: 9px; border-top: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0; }
+.mp-qr-img             { width: 52px; height: 52px; border-radius: 5px; border: 1px solid #e0e0e0; flex-shrink: 0; }
+.mp-qr-actions         { display: flex; gap: 6px; }
+.mp-qr-btn             { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: #f2f8f5; border: 1px solid #c8ddd2; border-radius: 7px; color: #0b422a; font-size: 13px; text-decoration: none; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.mp-qr-btn:hover       { background: #0b422a; color: #fbb034; }
+
+.mp-btn                { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 9px 0; background: #0b422a; color: #fbb034; border-radius: 7px; font-size: 12.5px; font-weight: 700; text-decoration: none; transition: background 0.15s; }
+.mp-btn:hover          { background: #083320; color: #fbb034; }
+
+.leaflet-popup-content-wrapper { padding: 0 !important; border-radius: 12px !important; overflow: hidden; box-shadow: 0 8px 28px rgba(0,0,0,0.16) !important; }
+.leaflet-popup-content { margin: 0 !important; width: 270px !important; }
+.leaflet-popup-tip-container { margin-top: -1px; }
+
+/* Muted Gold Observation Badge - List View */
+.badge-obs-gold {
+    background-color: #e8a838; /* Less yellow, more amber */
+    color: #0b422a;
+    padding: 2px 10px;        /* Tighter padding to fit text */
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 800;
+    display: inline-flex;     /* Forces box to shrink to text size */
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 6px;
+    width: fit-content;       /* Prevents the badge from being too long */
+    text-transform: uppercase;
+}
+
+/* Green Observation Badge - Map Popup */
+.mp-obs-badge {
+    background-color: #0b422a;
+    color: #e8a838;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 9px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+/* Status Badges Grouping (Below ID) */
+.status-row-vertical {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    margin-bottom: 12px;
+}
+
+/* Smart Tags Dropdown Fix */
+.tree-tags-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 32px; /* Shows one row only */
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out;
+}
+
+/* This class is added by JS when clicking "more" */
+.tree-tags-inner.expanded {
+    max-height: 500px; /* Allows it to drop down */
+}
+/* --- FIXED SMART TAGS CSS --- */
+.tree-tags-wrap {
+    margin-top: 12px;
+    position: relative;
+    width: 100%;
+}
+
+.tree-tags-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 35px; /* Exactly one row */
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out;
+}
+
+/* When the user clicks "more", we allow the box to grow */
+.tree-tags-inner.expanded {
+    max-height: 500px;
+}
+
+/* IMPORTANT: Force tags to show when parent is expanded */
+.tree-tags-inner.expanded .tag-hidden {
+    display: inline-flex !important;
+}
+
+/* The button styling (Matching your green/gold theme) */
+.tag-more-btn {
+    border: none;
+    background: #0b422a; /* Dark Green */
+    color: #e8a838;      /* Muted Gold */
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 800;
+    cursor: pointer;
+    font-size: 11px;
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: 0.2s;
+}
+
+.tag-more-btn:hover {
+    background-color: #0d5234;
+}
+
+/* --- Professional Circular Pagination --- */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin: 40px 0;
+    padding-bottom: 30px;
+}
+
+.page-numbers {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-pag {
+    background-color: #0b422a; /* Dark Green */
+    color: #ffffff !important;  /* Bold White Text */
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;       /* Perfect Circle */
+    text-decoration: none;
+    font-weight: 800;         /* Bold */
+    font-size: 14px;
+    transition: all 0.3s ease;
+    border: 2px solid #0b422a;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-pag:hover {
+    background-color: #fbb034; /* Turns Gold */
+    color: #0b422a !important;  /* Text turns Green */
+    border-color: #fbb034;
+    transform: translateY(-3px);
+}
+
+.btn-pag.active {
+    background-color: #fbb034; /* Gold for current page */
+    color: #0b422a !important;
+    border-color: #0b422a;
+    cursor: default;
+}
+
+.pag-dots {
+    color: #0b422a;
+    font-weight: bold;
+}
+
+/* Mobile Tweak */
+@media (max-width: 480px) {
+    .btn-pag {
+        width: 38px;
+        height: 38px;
+        font-size: 12px;
+    }
+}
+/* --- Emergency Health Highlighting --- */
+/* --- Emergency Health Highlighting (Clean & Subtle) --- */
+
+/* --- Emergency Health Highlighting (Minimalist & Professional) --- */
+
+.tree-card {
+    position: relative;
+    /* Ensure the flag doesn't get cut by rounded corners */
+    overflow: visible !important;
+    transition: background-color 0.3s ease;
+}
+
+/* CRITICAL: Extremely pale rose tint (Nearly White) */
+.card-critical {
+    background-color: #fff9f9 !important; /* Very subtle rose-white */
+    border: 1.5px solid #e57373 !important; /* Lighter, soft red border */
+}
+
+/* NEEDS ATTENTION: Extremely pale cream tint (Nearly White) */
+.card-needs {
+    background-color: #fffdf7 !important; /* Very subtle cream-white */
+    border: 1.5px solid #f9cb73 !important; /* Soft gold border */
+}
+
+/* THE FLAG/TRIANGLE ICON */
+.emergency-flag {
+    position: absolute;
+    /* Perfect corner alignment */
+    top: -10px;
+    left: -8px;
+    z-index: 100;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border: 2px solid #ffffff; /* White ring to separate icon from card */
+}
+
+.flag-red {
+    background-color: #e57373; /* Muted soft red */
+    color: white;
+}
+
+.flag-amber {
+    background-color: #fbb034;
+    color: #0b422a;
+}
+
+.emergency-flag i {
+    font-size: 13px;
+}
+
+/* --- Map Marker Styling --- */
+.map-tree-circle {
+    width: 36px;
+    height: 36px;
+    background: #0b422a; /* Forest Green */
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative; /* Required for the alert positioning */
+}
+
+.map-tree-circle i {
+    color: white;
+    font-size: 16px;
+}
+
+/* THE TINY ALERT ICON ON MAP */
+.map-marker-alert {
+    position: absolute;
+    top: -4px;   /* Sits on the top right edge */
+    right: -4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid white;
+    z-index: 10;
+}
+
+.map-marker-alert.red {
+    background-color: #e57373; /* Muted red from card */
+    color: white;
+}
+
+.map-marker-alert.amber {
+    background-color: #fbb034; /* Gold from card */
+    color: #0b422a;
+}
+
+.map-marker-alert i {
+    font-size: 8px !important; /* Very tiny icon */
+}

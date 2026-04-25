@@ -278,8 +278,20 @@
                         No trees found matching your filters.
                     </p>
                 {% endif %}
-                {% for tree, species, adoption, user, obs_count in trees %}
-                <div class="tree-card">
+                {% for tree, species, adoption, user, obs_count, last_observed in trees %}
+                <div class="tree-card {{ 'card-critical' if tree.health_status == 'Critical' }} {{ 'card-needs' if tree.health_status == 'Needs Attention' }}">
+
+                    <!-- ALERT FLAGS (Top Left) -->
+                    {% if tree.health_status == 'Critical' %}
+                        <div class="emergency-flag flag-red" title="Critical Health Alert">
+                            <i class="fa-solid fa-flag"></i>
+                        </div>
+                    {% elif tree.health_status == 'Needs Attention' %}
+                        <div class="emergency-flag flag-amber" title="Needs Attention">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                    {% endif %}
+
                     <div class="tree-card-main">
 <!-- LEFT: IMAGE + EDIT BUTTON -->
                         <div class="tree-img-container">
@@ -301,52 +313,101 @@
                         </div>
 
                     <!-- Center: Details -->
+
                         <div class="tree-info">
+                            <!-- 1. Observation Badge (Gold) -->
+                            <div class="badge-obs-gold">
+                                <i class="fa-solid fa-eye"></i> {{ obs_count }} observations
+                            </div>
 
-                            <p style="font-size: 14px; color:#666">
-                                <i class=" fa fa-eye"></i> {{obs_count}} observations
+                            <!-- 2. Species Name -->
+                            <h3 style="margin-bottom: 0;">{{ species.species_name }}</h3>
+
+                            <!-- 3. Tree ID -->
+                            <p class="tree-loc" style="margin: 2px 0 8px 0;">
+                                <i class="fa-solid fa-location-dot"></i> Tree ID #{{ tree.tree_id }}
                             </p>
-                            <h3>{{ species.species_name }}</h3>
-                            <p class="tree-loc"><i class="fa fa-location-dot"></i> Tree ID #{{ tree.tree_id }}</p>
 
-                            <div class="status-row">
-                                <span class="badge badge-{{ 'healthy' if tree.health_status == 'Healthy' else 'needs' if tree.health_status == 'Needs Attention' else 'critical' }}">
+                            <!-- 4. Status Badges (Moved here to be directly under ID) -->
+                            <div class="status-badges-group" style="margin-bottom: 15px;">
+                                <span class="badge badge-{{ 'healthy' if tree.health_status == 'Healthy' else 'needs' if tree.health_status == 'Needs Attention' else 'critical' }} badge-health">
+                                    <i class="fa {{ 'fa-leaf' if tree.health_status == 'Healthy' else 'fa-triangle-exclamation' if tree.health_status == 'Needs Attention' else 'fa-circle-xmark' }}"></i>
                                     {{ tree.health_status }}
                                 </span>
                                 {% if not adoption %}
-                                    <span class="badge badge-available">Available</span>
+                                    <span class="badge badge-available">
+                                        <i class="fa-solid fa-circle-check"></i> Available
+                                    </span>
                                 {% endif %}
                             </div>
 
+                            <!-- 5. Stats Row (Kept as requested) -->
+                            <div class="tree-stats-row">
+                                <div class="tree-stat">
+                                    <i class="fa fa-calendar-days"></i>
+                                    <span class="tree-stat-val">{{ tree.age }} yrs</span>
+                                    <span class="tree-stat-lbl">Age</span>
+                                </div>
+                                <div class="tree-stat">
+                                    <i class="fa fa-tree"></i>
+                                    <span class="tree-stat-val">
+                                        {% if tree.tree_size <= 5 %}Small
+                                        {% elif tree.tree_size <= 15 %}Medium
+                                        {% else %}Large{% endif %}
+                                    </span>
+                                    <span class="tree-stat-lbl">Size</span>
+                                </div>
+                                <div class="tree-stat">
+                                    <i class="fa fa-seedling"></i>
+                                    <span class="tree-stat-val">
+                                        {% if tree.planting_date %}{{ tree.planting_date.strftime('%d %b %Y') }}{% else %}Unknown{% endif %}
+                                    </span>
+                                    <span class="tree-stat-lbl">Planted</span>
+                                </div>
+                                <div class="tree-stat">
+                                    <i class="fa fa-clock"></i>
+                                    <span class="tree-stat-val">
+                                        {% if last_observed %}
+                                            {# We force the calculation here #}
+                                            {% set diff = (now - last_observed).total_seconds() %}
 
-                            <div class="tree-meta">
+                                            {# IF THE NUMBER IS NEGATIVE, MAKE IT 0 #}
+                                            {% if diff < 0 %}{% set diff = 0 %}{% endif %}
 
-                                <span><i class="fa fa-ruler-vertical"></i> Size: {{ tree.tree_size }}m </span>
-                                <span><i class="fa fa-calendar-check"></i> Age: {{ tree.age }} yrs </span>
-                                <i class="fa fa-seedling"></i>
-                                <span>
-                                    Planted:
-
-                                    {% if tree.planting_date %}
-                                        {{ tree.planting_date.strftime('%d %b %Y') }}
-                                    {% else %}
-                                        Unknown
-                                    {% endif %}
-                                </span>
+                                            {% if diff < 60 %}
+                                                Just now
+                                            {% elif diff < 3600 %}
+                                                {{ (diff / 60)|int }}m ago
+                                            {% elif diff < 86400 %}
+                                                {{ (diff / 3600)|int }}h ago
+                                            {% else %}
+                                                {{ (diff / 86400)|int }}d ago
+                                            {% endif %}
+                                        {% else %}
+                                            None
+                                        {% endif %}
+                                    </span>
+                                    <span class="tree-stat-lbl">Observed</span>
+                                </div>
                             </div>
 
+                            <!-- 6. Smart Tags -->
                             {% if tree.tags %}
-                            <div class="tag-section">
-                                <div class="tag-list">
+                            <div class="tree-tags-wrap" id="tagwrap-{{ tree.tree_id }}">
+                                <div class="tree-tags-inner" id="taginner-{{ tree.tree_id }}">
                                     {% for t in tree.tags %}
-                                        <span class="tag-pill">#{{t.name }}</span>
+                                        <span class="tag-pill">#{{ t.name }}</span>
                                     {% endfor %}
                                 </div>
+                                <button class="tag-more-btn" id="tagbtn-{{ tree.tree_id }}"
+                                        style="display:none"
+                                        onclick="toggleTags({{ tree.tree_id }})">
+                                    <i class="fa fa-chevron-down"></i>
+                                    <span class="tag-more-label"></span>
+                                </button>
                             </div>
                             {% endif %}
                         </div>
-
-
                         <!-- Right: QR Code -->
                         <div class="qr-container">
                             <p class="tag-id">TAG #{{ tree.tree_id }}</p>
@@ -382,12 +443,53 @@
                 </div>
                 {% endfor %}
             </div>
+
+              <!-- End of tree-list -->
+
+            <!-- REAL WORLD PAGINATION SECTION -->
+
+            <div class="pagination-container">
+
+                <!-- Previous Button -->
+                {% if pagination.has_prev %}
+                    <a href="{{ url_for('local_trees', **dict(request.args, page=pagination.prev_num)) }}" class="btn-pag">
+                        <i class="fa fa-chevron-left"></i>
+                    </a>
+                {% endif %}
+
+                <div class="page-numbers">
+                    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                        {% if page_num %}
+                            {% if pagination.page == page_num %}
+                                <span class="btn-pag active">{{ page_num }}</span>
+                            {% else %}
+                                <!-- Page Number Link -->
+                                <a href="{{ url_for('local_trees', **dict(request.args, page=page_num)) }}" class="btn-pag">
+                                    {{ page_num }}
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            <span class="pag-dots">...</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- Next Button -->
+                {% if pagination.has_next %}
+                    <a href="{{ url_for('local_trees', **dict(request.args, page=pagination.next_num)) }}" class="btn-pag">
+                        <i class="fa fa-chevron-right"></i>
+                    </a>
+                {% endif %}
+            </div>
+            <!-- END PAGINATION -->
+
+
         </div>
 
     </div>
 <script>
 const TREE_DATA = [
-    {% for tree, species, adoption, user, obs_count in trees %}
+    {% for tree, species, adoption, user, obs_count, last_observed in all_trees %}
     {
         id:         {{ tree.tree_id }},
         species:    {{ species.species_name | tojson }},
@@ -398,9 +500,10 @@ const TREE_DATA = [
         age:        {{ tree.age | tojson }},
         size:       {{ tree.tree_size | tojson }},
         planted:    {% if tree.planting_date %}{{ tree.planting_date.strftime('%d %b %Y') | tojson }}{% else %}null{% endif %},
+        tags:       {{ tree.tags | map(attribute='name') | list | tojson }},
         adopted:    {{ 'true' if adoption else 'false' }},
         adopter:    {{ user.username | tojson if (adoption and user) else 'null' }},
-        tags:       {{ tree.tags | map(attribute='name') | list | tojson }},
+        last_obs:   {% if last_observed %}{{ last_observed.isoformat() | tojson }}{% else %}null{% endif %},
         image:      {{ (tree.image_url.split('static/')[-1] if tree.image_url else '') | tojson }},
         detail_url: {{ url_for('tree_detail', tree_id=tree.tree_id) | tojson }},
         qr_url:     {{ url_for('generate_qr', tree_id=tree.tree_id) | tojson }}
@@ -434,96 +537,117 @@ function clearFilters() {
     document.getElementById('filterForm').submit();
 }
 
+// Filter dropdowns
 document.querySelectorAll(".filter-pill").forEach(btn => {
-    btn.addEventListener("click", function () {
+    btn.addEventListener("click", function() {
         this.parentElement.classList.toggle("active");
     });
 });
-
-
-// Close dropdown when clicking outside
 document.addEventListener("click", function(e) {
     document.querySelectorAll(".filter-dropdown").forEach(drop => {
-        if (!drop.contains(e.target)) {
-            drop.classList.remove("active");
-        }
+        if (!drop.contains(e.target)) drop.classList.remove("active");
     });
 });
-// ── Remember which view is active when filters are applied ──
-function rememberView() {
-    const active = document.getElementById('btn-map').classList.contains('active') ? 'map' : 'list';
-    document.getElementById('viewInput').value = active;
-}
-function switchView(view) {
-    const listView = document.getElementById('list-view');
-    const mapView  = document.getElementById('map-view');
-    const btnList  = document.getElementById('btn-list');
-    const btnMap   = document.getElementById('btn-map');
 
-    if (viewInput) {
-        viewInput.value = view;
+// ── Write active view into form before submit ──
+function rememberView() {
+    const isMap = document.getElementById('btn-map').classList.contains('active');
+    document.getElementById('viewInput').value = isMap ? 'map' : 'list';
+}
+
+// ── Toggle list / map ──
+function switchView(view) {
+    const listEl  = document.getElementById('list-view');
+    const mapEl   = document.getElementById('map-view');
+    const btnList = document.getElementById('btn-list');
+    const btnMap  = document.getElementById('btn-map');
+
+    const vInput = document.getElementById('viewInput');
+
+    // Update the hidden input value so the form "remembers" the tab
+    if (vInput) {
+        vInput.value = view;
     }
 
     if (view === 'map') {
-        listView.style.display = 'none';
-        mapView.style.display  = 'block';
+        listEl.style.display = 'none';
+        mapEl.style.display  = 'block';
         btnList.classList.remove('active');
         btnMap.classList.add('active');
         if (!window._mapInitialised) {
             initMap();
         } else {
-            setTimeout(() => window._leafletMap && window._leafletMap.invalidateSize(), 100);
+            setTimeout(() => window._leafletMap && window._leafletMap.invalidateSize(), 50);
         }
     } else {
-        mapView.style.display  = 'none';
-        listView.style.display = 'block';
+        mapEl.style.display  = 'none';
+        listEl.style.display = 'block';
         btnMap.classList.remove('active');
         btnList.classList.add('active');
     }
 }
 
+// ── Map init — runs once on first Map click ──
 function initMap() {
     window._mapInitialised = true;
 
     const validTrees = TREE_DATA.filter(t => t.lat != null && t.lng != null);
     const centre = validTrees.length
         ? [validTrees[0].lat, validTrees[0].lng]
-        : [51.8993, -2.0782]; // Cheltenham fallback
+        : [51.8993, -2.0782];
 
     const map = L.map('tree-map', {
         center: centre,
         zoom: 15,
-        scrollWheelZoom: false
+        scrollWheelZoom: true   // desktop scroll zoom on
     });
     window._leafletMap = map;
 
-    // CartoDB Voyager — clean, Apple Maps-like green feel
+    // Disable scroll zoom on touch devices — pinch to zoom instead
+    if ('ontouchstart' in window) {
+        map.scrollWheelZoom.disable();
+    }
+
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
         subdomains: 'abcd',
         maxZoom: 20
     }).addTo(map);
 
-    // Green circle tree icon — matches tree_detail page
     const treeIcon = L.divIcon({
         className: '',
         html: `<div style="
-                    width:38px; height:38px;
-                    background:#0b422a;
+                    width:36px; height:36px;
+                    background:#2d8a4e;
                     border-radius:50%;
                     border:3px solid #fff;
-                    box-shadow:0 3px 10px rgba(0,0,0,0.30);
+                    box-shadow:0 2px 8px rgba(0,0,0,0.30);
                     display:flex; align-items:center; justify-content:center;">
-                <i class='fa fa-tree' style='color:#fbb034; font-size:16px;'></i>
+                <i class='fa fa-tree' style='color:#fff; font-size:16px;'></i>
                </div>`,
-        iconSize:    [38, 38],
-        iconAnchor:  [19, 38],
-        popupAnchor: [0, -40]
+        iconSize: [36, 36], iconAnchor: [18, 18], popupAnchor: [0, -20]
     });
 
-    // TREE_DATA already contains only filtered trees (Flask filtered them server-side)
-    // so markers automatically match whatever filters/search are active
     validTrees.forEach(tree => {
+            // 1. Determine which tiny icon to show on the marker
+        let alertHtml = '';
+        if (tree.health === 'Critical') {
+            alertHtml = '<div class="map-marker-alert red"><i class="fa-solid fa-flag"></i></div>';
+        } else if (tree.health === 'Needs Attention') {
+            alertHtml = '<div class="map-marker-alert amber"><i class="fa-solid fa-triangle-exclamation"></i></div>';
+        }
+
+        // 2. Create the Icon (Adding alertHtml inside the div)
+        const treeIcon = L.divIcon({
+            className: '',
+            html: `<div class="map-tree-circle">
+                    <i class='fa fa-tree'></i>
+                    ${alertHtml}
+                   </div>`,
+            iconSize: [36, 36],
+            iconAnchor: [18, 18],
+            popupAnchor: [0, -20]
+        });
         const healthClass = tree.health === 'Healthy'         ? 'healthy'
                           : tree.health === 'Needs Attention' ? 'needs'
                           : 'critical';
@@ -542,6 +666,15 @@ function initMap() {
         const sizeLabel = tree.size <= 5  ? 'Small'
                         : tree.size <= 15 ? 'Medium'
                         : 'Large';
+
+        // Last observed relative time
+        let lastSeenHtml = 'None';
+        if (tree.last_obs) {
+            const diff = (Date.now() - new Date(tree.last_obs).getTime()) / 1000;
+            if (diff < 3600)       lastSeenHtml = Math.floor(diff / 60) + 'm ago';
+            else if (diff < 86400) lastSeenHtml = Math.floor(diff / 3600) + 'h ago';
+            else                   lastSeenHtml = Math.floor(diff / 86400) + 'd ago';
+        }
 
         // Tags with collapsible toggle
         let tagsHtml = '';
@@ -565,29 +698,18 @@ function initMap() {
             tagsHtml = `<div class="mp-tag-section"><div class="mp-tags">${visibleTags}${moreBtn}</div></div>`;
         }
 
-        // Adopted — shows who adopted it
         const adoptedHtml = tree.adopted
-            ? `<div class="mp-adopted adopted">
-                   <i class="fa fa-user-check"></i>
-                   Adopted by <strong>${tree.adopter}</strong>
-               </div>`
-            : `<div class="mp-adopted available">
-                   <i class="fa fa-circle-dot"></i>
-                   Available to adopt
-               </div>`;
+            ? `<div class="mp-adopted adopted"><i class="fa fa-user-check"></i> Adopted by <strong>${tree.adopter}</strong></div>`
+            : `<div class="mp-adopted available"><i class="fa fa-circle-dot"></i> Available to adopt</div>`;
 
-        // QR section with download and print
         const qrHtml = `
             <div class="mp-qr-row">
                 <img src="${tree.qr_url}" class="mp-qr-img" alt="QR #${tree.id}">
                 <div class="mp-qr-actions">
-                    <a href="${tree.qr_url}"
-                       download="tree_${tree.id}_qr.png"
-                       class="mp-qr-btn" title="Download QR">
+                    <a href="${tree.qr_url}" download="tree_${tree.id}_qr.png" class="mp-qr-btn" title="Download QR">
                         <i class="fa fa-download"></i>
                     </a>
-                    <button class="mp-qr-btn" title="Print QR"
-                        onclick="printQR('${tree.qr_url}')">
+                    <button class="mp-qr-btn" title="Print QR" onclick="printQR('${tree.qr_url}')">
                         <i class="fa fa-print"></i>
                     </button>
                 </div>
@@ -596,55 +718,55 @@ function initMap() {
         const popup = `
             <div class="map-popup">
                 <div class="mp-img-wrap">${imgHtml}</div>
-
-                <div class="mp-header-row">
-                    <div class="mp-title-col">
-                        <p class="mp-species">${tree.species}</p>
-                        <p class="mp-location">
-                            <i class="fa fa-location-dot"></i>
-                            ${tree.lat.toFixed(3)}, ${tree.lng.toFixed(3)}
-                        </p>
+                <div class="mp-body" style="padding:11px;">
+                    <!-- Green/Gold Observation Badge -->
+                    <div class="mp-obs-badge" style="background:#0b422a; color:#fbb034; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:800; display:inline-block; margin-bottom:8px;">
+                        <i class="fa fa-eye"></i> ${tree.obs} Observations
                     </div>
-                    <span class="mp-health-badge ${healthClass}">
-                        ${healthIcon} ${tree.health}
-                    </span>
-                </div>
-
-                <div class="mp-body">
-                    <div class="mp-stats">
-                        <div class="mp-stat">
-                            <i class="fa fa-calendar-days"></i>
-                            <span class="mp-stat-val">${tree.age ?? '—'} yrs</span>
-                            <span class="mp-stat-lbl">Age</span>
+                    <div class="mp-header-row" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="mp-title-col">
+                            <p class="mp-species">${tree.species}</p>
+                            <p class="mp-location"><i class="fa fa-location-dot"></i> ${tree.lat.toFixed(3)}, ${tree.lng.toFixed(3)}</p>
                         </div>
-                        <div class="mp-stat">
-                            <i class="fa fa-tree"></i>
-                            <span class="mp-stat-val">${sizeLabel}</span>
-                            <span class="mp-stat-lbl">Size</span>
-                        </div>
-                        <div class="mp-stat">
-                            <i class="fa fa-eye"></i>
-                            <span class="mp-stat-val">${tree.obs}</span>
-                            <span class="mp-stat-lbl">Observations</span>
-                        </div>
+                        <span class="mp-health-badge ${healthClass}">${healthIcon} ${tree.health}</span>
                     </div>
+                    <div class="mp-body">
+                        <div class="mp-stats">
+                            <div class="mp-stat">
+                                <i class="fa fa-calendar-days"></i>
+                                <span class="mp-stat-val">${tree.age ?? '—'} yrs</span>
+                                <span class="mp-stat-lbl">Age</span>
+                            </div>
+                            <div class="mp-stat">
+                                <i class="fa fa-tree"></i>
+                                <span class="mp-stat-val">${sizeLabel}</span>
+                                <span class="mp-stat-lbl">Size</span>
+                            </div>
+                            <div class="mp-stat">
+                                <i class="fa fa-seedling"></i>
+                                <span class="mp-stat-val">${tree.planted ?? '—'}</span>
+                                <span class="mp-stat-lbl">Planted</span>
+                            </div>
+                            <div class="mp-stat">
+                                <i class="fa fa-clock"></i>
+                                <span class="mp-stat-val">${lastSeenHtml}</span>
+                                <span class="mp-stat-lbl">Observed</span>
+                            </div>
+                        </div>
+                        ${adoptedHtml}
+                        ${tagsHtml}
+                        ${qrHtml}
+                        <a href="${tree.detail_url}" class="mp-btn">
+                            View Details <i class="fa fa-chevron-right"></i>
+                        </a>
+                    </div>
+                </div>`;
 
-                    ${adoptedHtml}
-                    ${tagsHtml}
-                    ${qrHtml}
+            L.marker([tree.lat, tree.lng], { icon: treeIcon })
+                .addTo(map)
+                .bindPopup(popup, { maxWidth: 270, minWidth: 270 });
+        });
 
-                    <a href="${tree.detail_url}" class="mp-btn">
-                        View Details <i class="fa fa-chevron-right"></i>
-                    </a>
-                </div>
-            </div>`;
-
-        L.marker([tree.lat, tree.lng], { icon: treeIcon })
-            .addTo(map)
-            .bindPopup(popup, { maxWidth: 270, minWidth: 270 });
-    });
-
-    // Fit to all markers, capped at zoom 17 so it doesn't over-zoom single trees
     setTimeout(() => {
         map.invalidateSize();
         if (validTrees.length > 1) {
@@ -654,13 +776,83 @@ function initMap() {
         }
     }, 150);
 }
-// ── Restore active view after filter apply ──
-(function() {
+
+// ── On load: restore map view + measure tag overflow ──
+document.addEventListener('DOMContentLoaded', function() {
+
+    // Restore map if URL says ?view=map
     const params = new URLSearchParams(window.location.search);
-    if (params.get('view') === 'map') {
+        const savedView = params.get('view');
+    if (savedView === 'map') {
         switchView('map');
+    } else {
+        switchView('list');
     }
-})();
+
+
+    // Smart tag overflow detection
+   document.querySelectorAll('[id^="tagwrap-"]').forEach(wrap => {
+        const id    = wrap.id.replace('tagwrap-', '');
+        const inner = document.getElementById('taginner-' + id);
+        const btn   = document.getElementById('tagbtn-' + id);
+        if (!inner || !btn) return;
+
+        const tags  = inner.querySelectorAll('.tag-pill');
+        if (tags.length === 0) return;
+
+        // Measure how many tags fit in the first line
+        const lineH = tags[0].offsetHeight + 6;
+        if (inner.scrollHeight > lineH * 1.5) {
+            let visibleCount = 0;
+            let usedWidth    = 0;
+            const maxWidth   = inner.offsetWidth;
+
+            tags.forEach(tag => {
+                usedWidth += tag.offsetWidth + 6;
+                // Leave a little room for the "more" button
+                if (usedWidth <= maxWidth - 60) {
+                    visibleCount++;
+                }
+            });
+
+            const hiddenCount = tags.length - visibleCount;
+
+            if (hiddenCount > 0) {
+                let shown = 0;
+                tags.forEach(tag => {
+                    shown++;
+                    if (shown > visibleCount) {
+                        tag.classList.add('tag-hidden');
+                    }
+                });
+
+                const countLabel = `+${hiddenCount} more`;
+                btn.style.display = 'inline-flex';
+                btn.querySelector('.tag-more-label').textContent = countLabel;
+
+                // Store the "+X more" text so we can get it back after clicking "less"
+                btn.setAttribute('data-original-count', countLabel);
+            }
+        }
+    });
+});
+// ── Toggle hidden tags in list card ──
+function toggleTags(id) {
+    const inner = document.getElementById('taginner-' + id);
+    const btn = document.getElementById('tagbtn-' + id);
+
+    // Toggle the expansion class
+    inner.classList.toggle('expanded');
+
+    const isExpanded = inner.classList.contains('expanded');
+
+    // Change Icon and Text
+    btn.querySelector('i').className = isExpanded ? 'fa fa-chevron-up' : 'fa fa-chevron-down';
+    btn.querySelector('.tag-more-label').textContent = isExpanded ? 'less' : 'more';
+
+    // Set a data attribute to keep track of state
+    btn.dataset.open = isExpanded ? '1' : '0';
+}
 
 // ── QR print ──
 function printQR(imageUrl) {
@@ -675,40 +867,67 @@ function printQR(imageUrl) {
         <body>
             <img src="${imageUrl}"/>
             <button onclick="window.close()">Close</button>
-            <script>window.onload=function(){window.focus();window.print();};window.onafterprint=function(){window.close()};<\/script>
+            <script>
+                window.onload = function() { window.focus(); window.print(); };
+                window.onafterprint = function() { window.close(); };
+            <\/script>
         </body></html>`);
     w.document.close();
 }
 
-
-// Auto-dismiss import feedback after 6 seconds
+// ── Import feedback auto-dismiss ──
 const fb = document.getElementById('importFeedback');
 if (fb) {
-    setTimeout(() => {
-        fb.classList.add('dismissing');
-        setTimeout(() => fb.remove(), 500);
-    }, 6700);
+    setTimeout(() => { fb.classList.add('dismissing'); setTimeout(() => fb.remove(), 500); }, 6700);
+}
+function dismissFeedback() {
+    const el = document.getElementById('importFeedback');
+    if (el) { el.classList.add('dismissing'); setTimeout(() => el.remove(), 500); }
 }
 
-function dismissFeedback() {
-    const fb = document.getElementById('importFeedback');
-    if (fb) {
-        fb.classList.add('dismissing');
-        setTimeout(() => fb.remove(), 500);
-    }
-}
 
 document.addEventListener("DOMContentLoaded", function() {
+    // 1. Restore the active view (Map or List)
     const urlParams = new URLSearchParams(window.location.search);
     const savedView = urlParams.get('view');
-
     if (savedView === 'map') {
         switchView('map');
     } else {
         switchView('list');
     }
-});
 
+    // 2. Smart Tag Logic (Overflow detection)
+    document.querySelectorAll('[id^="tagwrap-"]').forEach(wrap => {
+        const id = wrap.id.replace('tagwrap-', '');
+        const inner = document.getElementById('taginner-' + id);
+        const btn = document.getElementById('tagbtn-' + id);
+        if (!inner || !btn) return;
+
+        const tags = inner.querySelectorAll('.tag-pill');
+        if (tags.length === 0) return;
+
+        // ... your measurement logic to find 'visible' and 'hidden' counts ...
+        // (Assuming your logic calculates the 'hidden' variable here)
+
+        if (hidden > 0) {
+            let shown = 0;
+            tags.forEach(tag => {
+                shown++;
+                if (shown > visible) {
+                    tag.classList.add('tag-hidden');
+                }
+            });
+
+            // --- THE FIX: STORE THE TEXT ---
+            const countLabel = `+${hidden} more`;
+            btn.style.display = 'inline-flex';
+            btn.querySelector('.tag-more-label').textContent = countLabel;
+
+            // This stores "+7 more" in the button's memory
+            btn.setAttribute('data-original-count', countLabel);
+        }
+    });
+});
 
 </script>
 <!-- YOUR EXISTING JS ABOVE -->

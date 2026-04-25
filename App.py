@@ -3,10 +3,10 @@ import io
 import re
 from flask import Flask, flash, render_template, request, redirect, url_for, session, get_flashed_messages, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from database import db, User, Adoption, Observation, Observation_type, Tree, Species, Tag, TreeTag
 from flask_mail import Mail, Message
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, case
 import qrcode
 import secrets
 
@@ -512,6 +512,8 @@ def local_trees():
     if not session.get("is_active"):
         return redirect(url_for('login'))
 
+
+
     # request.args gets data from query string (? search = oak)
     search_query = request.args.get('search', '').strip().lower()
     health_filters = request.args.getlist('health')
@@ -533,16 +535,34 @@ def local_trees():
 
     # outerjoin(Adoption) fetch all the trees even when they are not adopted
     # so it outerjoins Adoption.user_id = User.user_id
+    latest_obs_sq = db.session.query(
+        Observation.tree_id,
+        func.max(Observation.observed_time).label('last_observed')
+    ).group_by(Observation.tree_id).subquery()
 
-    query = db.session.query(Tree, Species, Adoption, User, func.coalesce(func.count(Observation.observation_id), 0).label("obs_count"))\
+    query = db.session.query(
+        Tree, Species, Adoption, User,
+        func.coalesce(func.count(Observation.observation_id), 0).label("obs_count"),
+        latest_obs_sq.c.last_observed
+    )\
         .select_from(Tree)\
         .join(Species)\
         .outerjoin(Adoption)\
         .outerjoin(User)\
-        .outerjoin(Observation, Tree.tree_id== Observation.tree_id)\
-        .group_by(Tree.tree_id)
+        .outerjoin(Observation, Tree.tree_id == Observation.tree_id)\
+        .outerjoin(latest_obs_sq, Tree.tree_id == latest_obs_sq.c.tree_id)\
+        .group_by(Tree.tree_id, latest_obs_sq.c.last_observed)
 
-
+    health_priority = case(
+        {
+            'Critical' : 1,
+            'Needs Attention' : 2,
+            'Healthy': 3,
+        },
+        value=Tree.health_status,
+        else_=4
+    )
+    query = query.order_by(health_priority, Tree.tree_id.desc())
 
     if tag_filter:
         query = query.join(Tree.tags).filter(Tag.name == tag_filter)
@@ -610,12 +630,24 @@ def local_trees():
     all_species = Species.query.all()
     tree_count = len(trees)
 
+    all_trees = query.all()
+
+    page = request.args.get('page', 1, type=int)
+    per_page = 3
+
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    trees_on_page = pagination.items
     return render_template('local_trees.html',
-                           trees=trees,
-                           all_species=all_species,
+                           trees=trees_on_page, # use for cards
+                           all_trees=all_trees,
+                           pagination=pagination,
+                           now=datetime.now(),
                            search_query=search_query,
+                           all_species=all_species,
                            all_tags=all_tags,
-                           tree_count=tree_count
+                           tree_count=Tree.query.count(),
+
                            )
 
 
@@ -1011,7 +1043,7 @@ def import_trees():
                             new_obs = Observation(
                                 tree_id=existing.tree_id,
                                 notes=obs_notes,
-                                observed_time=datetime.utcnow(),
+                                observed_time=datetime.now(),
                                 user_id=user.user_id,
                                 observation_type_id=obs_type_id,
                                 image_url=row.get('obs_image', '').strip() or None
@@ -1068,7 +1100,7 @@ def import_trees():
                         new_obs = Observation(
                             tree_id=new_tree.tree_id,
                             notes=obs_notes,
-                            observed_time=datetime.utcnow(),
+                            observed_time=datetime.now(),
                             user_id=user.user_id,
                             observation_type_id=obs_type_id,
                             image_url=row.get('obs_image', '').strip() or None
