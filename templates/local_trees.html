@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Explore Local Trees</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
 </head>
@@ -26,7 +27,9 @@
         </h1>
 
         <!-- SEARCH BAR -->
-        <form method="GET" action="{{url_for('local_trees')}}">
+        <form method="GET" action="{{url_for('local_trees')}}" id="filterForm">
+            <input type="hidden" name="view" id="viewInput" value="{{ request.args.get('view', 'list') }}">
+            <input type="hidden" name="tag" id="tagInput" value="{{ request.args.get('tag', '') }}">
             <div class="search-bar-container">
                 <i class="fa fa-search search-icon"></i>
                 <input type="text" name="search" class="search-input" value="{{ search_query }}" placeholder="Search trees, species, tag ID or #tags ...">
@@ -125,17 +128,23 @@
             </div>
 
             <button type="submit" class="apply-btn">Apply Filters</button>
-            <a href="{{ url_for('local_trees') }}" class="btn-clear">
-                <i class="fa fa-rotate-left"></i>Clear Filters
+            <a href="javascript:void(0)" onclick="clearFilters()" class="btn-clear">
+                <i class="fa fa-rotate-left"></i> Clear Filters
 
             </a>
 
         </form>
-        {% if request.args.get('tag') or request.args.getlist('health')| length > 0 or request.args.getlist('status') %}
+
+        {% if request.args.get('tag') or request.args.getlist('health')|length > 0 or request.args.getlist('status') %}
         <div class="active-filters">
 
+            <!-- ADD/UPDATE THE TAG SECTION HERE -->
             {% if request.args.get('tag') %}
-                <span class="tag-pill">#{{ request.args.get('tag') }}</span>
+                <span class="tag-pill active">
+                    #{{ request.args.get('tag') }}
+                    <!-- The link below removes the tag but keeps the current view -->
+                    <a href="javascript:void(0)" onclick="applyTag('')" style="color: inherit; margin-left: 8px;">×</a>
+                </span>
             {% endif %}
 
             {% for h in request.args.getlist('health') %}
@@ -155,7 +164,8 @@
 
             <div class="tag-list">
                 {% for tag in all_tags %}
-                    <a href="{{ url_for('local_trees', tag=tag.name) }}" class="tag-pill">
+                    <!-- We add view=request.args.get('view', 'list') to the link -->
+                    <a href="javascript:void(0)" onclick="applyTag('{{ tag.name }}')" class="tag-pill">
                         #{{ tag.name }}
                     </a>
                 {% endfor %}
@@ -163,6 +173,8 @@
 
         </div>
         {% endif %}
+
+
         {% if session.get('role') == 'admin' %}
         <div class="io-toolbar">
 
@@ -242,122 +254,186 @@
         {% endif %}
         {% endif %}
 
+        <div class="view-toggle">
+            <button   id="btn-list" class="view-toggle-btn active"  onclick="switchView('list')">
+                <i class="fa fa-list"></i> List
+            </button>
+            <button   id="btn-map" class="view-toggle-btn" onclick="switchView('map')">
+                <i class="fa fa-map-location-dot"></i> Map
+            </button>
+        </div>
+        <div id="map-view" style="display:none;">
+            <div id="tree-map" style="height:520px; border-radius:12px; border:2.5px solid #0b422a; margin-top:16px;"></div>
+        </div>
+
+
 
 
 
                     <!-- TREE CARDS LIST -->
-        <div class="tree-list">
-            {% if trees|length == 0 %}
-                <p style="text-align:center; margin-top:40px;">
-                    No trees found matching your filters.
-                </p>
-            {% endif %}
-            {% for tree, species, adoption, user, obs_count in trees %}
-            <div class="tree-card">
-                <div class="tree-card-main">
+        <div id="list-view">
+            <div class="tree-list">
+                {% if trees|length == 0 %}
+                    <p style="text-align:center; margin-top:40px;">
+                        No trees found matching your filters.
+                    </p>
+                {% endif %}
+                {% for tree, species, adoption, user, obs_count in trees %}
+                <div class="tree-card">
+                    <div class="tree-card-main">
 <!-- LEFT: IMAGE + EDIT BUTTON -->
-                    <div class="tree-img-container">
+                        <div class="tree-img-container">
 
-                        {% if tree.image_url %}
-                            <img src="{{ url_for('static', filename=tree.image_url.split('static/')[-1]) }}" class="tree-img">
-                        {% else %}
-                            <div class="tree-img" style="display:flex; align-items:center; justify-content:center;">
-                                <i class="fa fa-tree" style="font-size:40px; color:#ccc;"></i>
-                            </div>
-                        {% endif %}
+                            {% if tree.image_url %}
+                                <img src="{{ url_for('static', filename=tree.image_url.split('static/')[-1]) }}" class="tree-img">
+                            {% else %}
+                                <div class="tree-img" style="display:flex; align-items:center; justify-content:center;">
+                                    <i class="fa fa-tree" style="font-size:40px; color:#ccc;"></i>
+                                </div>
+                            {% endif %}
 
-                        {% if session.get('role') == 'admin' %}
-                            <a href="{{ url_for('edit_tree', tree_id=tree.tree_id) }}" class="btn-edit-under">
-                                <i class="fa fa-pen"></i> Edit Tree
-                            </a>
-                        {% endif %}
+                            {% if session.get('role') == 'admin' %}
+                                <a href="{{ url_for('edit_tree', tree_id=tree.tree_id) }}" class="btn-edit-under">
+                                    <i class="fa fa-pen"></i> Edit Tree
+                                </a>
+                            {% endif %}
 
-                    </div>
+                        </div>
 
                     <!-- Center: Details -->
-                    <div class="tree-info">
+                        <div class="tree-info">
 
-                        <p style="font-size: 14px; color:#666">
-                            <i class=" fa fa-eye"></i> {{obs_count}} observations
-                        </p>
-                        <h3>{{ species.species_name }}</h3>
-                        <p class="tree-loc"><i class="fa fa-location-dot"></i> Tree ID #{{ tree.tree_id }}</p>
+                            <p style="font-size: 14px; color:#666">
+                                <i class=" fa fa-eye"></i> {{obs_count}} observations
+                            </p>
+                            <h3>{{ species.species_name }}</h3>
+                            <p class="tree-loc"><i class="fa fa-location-dot"></i> Tree ID #{{ tree.tree_id }}</p>
 
-                        <div class="status-row">
-                            <span class="badge badge-{{ 'healthy' if tree.health_status == 'Healthy' else 'needs' if tree.health_status == 'Needs Attention' else 'critical' }}">
-                                {{ tree.health_status }}
-                            </span>
-                            {% if not adoption %}
-                                <span class="badge badge-available">Available</span>
+                            <div class="status-row">
+                                <span class="badge badge-{{ 'healthy' if tree.health_status == 'Healthy' else 'needs' if tree.health_status == 'Needs Attention' else 'critical' }}">
+                                    {{ tree.health_status }}
+                                </span>
+                                {% if not adoption %}
+                                    <span class="badge badge-available">Available</span>
+                                {% endif %}
+                            </div>
+
+
+                            <div class="tree-meta">
+
+                                <span><i class="fa fa-ruler-vertical"></i> Size: {{ tree.tree_size }}m </span>
+                                <span><i class="fa fa-calendar-check"></i> Age: {{ tree.age }} yrs </span>
+                                <i class="fa fa-seedling"></i>
+                                <span>
+                                    Planted:
+
+                                    {% if tree.planting_date %}
+                                        {{ tree.planting_date.strftime('%d %b %Y') }}
+                                    {% else %}
+                                        Unknown
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            {% if tree.tags %}
+                            <div class="tag-section">
+                                <div class="tag-list">
+                                    {% for t in tree.tags %}
+                                        <span class="tag-pill">#{{t.name }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
                             {% endif %}
                         </div>
 
 
-                        <div class="tree-meta">
+                        <!-- Right: QR Code -->
+                        <div class="qr-container">
+                            <p class="tag-id">TAG #{{ tree.tree_id }}</p>
+                            <img src="{{ url_for('generate_qr', tree_id=tree.tree_id) }}" class="qr-img">
+                            <div class="qr-actions">
+                                <a href="{{ url_for('generate_qr', tree_id=tree.tree_id) }}"
+                                   download="tree_{{ tree.tree_id }}_qr.png"
+                                   class="qr-icon-btn"
+                                   title="Download QR">
+                                    <i class="fa fa-download"></i>
+                                </a>
 
-                            <span><i class="fa fa-ruler-vertical"></i> Size: {{ tree.tree_size }}m </span>
-                            <span><i class="fa fa-calendar-check"></i> Age: {{ tree.age }} yrs </span>
-                            <i class="fa fa-seedling"></i>
-                            <span>
-                                Planted:
-
-                                {% if tree.planting_date %}
-                                    {{ tree.planting_date.strftime('%d %b %Y') }}
-                                {% else %}
-                                    Unknown
-                                {% endif %}
-                            </span>
-                        </div>
-
-                        {% if tree.tags %}
-                        <div class="tag-section">
-                            <div class="tag-list">
-                                {% for t in tree.tags %}
-                                    <span class="tag-pill">#{{t.name }}</span>
-                                {% endfor %}
+                                    <button onclick="printQR('{{ url_for('generate_qr', tree_id=tree.tree_id) }}')"
+                                            class="qr-icon-btn"
+                                            title="Print QR">
+                                        <i class="fa fa-print"></i>
+                                    </button>
                             </div>
                         </div>
-                        {% endif %}
                     </div>
 
-
-                    <!-- Right: QR Code -->
-                    <div class="qr-container">
-                        <p class="tag-id">TAG #{{ tree.tree_id }}</p>
-                        <img src="{{ url_for('generate_qr', tree_id=tree.tree_id) }}" class="qr-img">
-                        <div class="qr-actions">
-                            <a href="{{ url_for('generate_qr', tree_id=tree.tree_id) }}"
-                               download="tree_{{ tree.tree_id }}_qr.png"
-                               class="qr-icon-btn"
-                               title="Download QR">
-                                <i class="fa fa-download"></i>
-                            </a>
-
-                                <button onclick="printQR('{{ url_for('generate_qr', tree_id=tree.tree_id) }}')"
-                                        class="qr-icon-btn"
-                                        title="Print QR">
-                                    <i class="fa fa-print"></i>
-                                </button>
+                    <!-- Footer: Adoption Logic -->
+                    <div class="adoption-bar">
+                        <div class="adopter-info">
+                            {% if adoption and user %}
+                                <i class="fa fa-user-check" style="color:#0b422a;"></i> Adopted by <strong>{{ user.username}}</strong>
+                            {% else %}
+                                <i class="fa fa-circle-dot" style="color:#fbb034;"></i> Available to adopt
+                            {% endif %}
                         </div>
+                        <a href="{{ url_for ('tree_detail', tree_id=tree.tree_id) }}" class="btn-view">view details<i class="fa fa-chevron-right"></i></a>
                     </div>
                 </div>
-
-                <!-- Footer: Adoption Logic -->
-                <div class="adoption-bar">
-                    <div class="adopter-info">
-                        {% if adoption and user %}
-                            <i class="fa fa-user-check" style="color:#0b422a;"></i> Adopted by <strong>{{ user.username}}</strong>
-                        {% else %}
-                            <i class="fa fa-circle-dot" style="color:#fbb034;"></i> Available to adopt
-                        {% endif %}
-                    </div>
-                    <a href="{{ url_for ('tree_detail', tree_id=tree.tree_id) }}" class="btn-view">view details<i class="fa fa-chevron-right"></i></a>
-                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
+
     </div>
 <script>
+const TREE_DATA = [
+    {% for tree, species, adoption, user, obs_count in trees %}
+    {
+        id:         {{ tree.tree_id }},
+        species:    {{ species.species_name | tojson }},
+        lat:        {{ tree.latitude }},
+        lng:        {{ tree.longitude }},
+        health:     {{ tree.health_status | tojson }},
+        obs:        {{ obs_count }},
+        age:        {{ tree.age | tojson }},
+        size:       {{ tree.tree_size | tojson }},
+        planted:    {% if tree.planting_date %}{{ tree.planting_date.strftime('%d %b %Y') | tojson }}{% else %}null{% endif %},
+        adopted:    {{ 'true' if adoption else 'false' }},
+        adopter:    {{ user.username | tojson if (adoption and user) else 'null' }},
+        tags:       {{ tree.tags | map(attribute='name') | list | tojson }},
+        image:      {{ (tree.image_url.split('static/')[-1] if tree.image_url else '') | tojson }},
+        detail_url: {{ url_for('tree_detail', tree_id=tree.tree_id) | tojson }},
+        qr_url:     {{ url_for('generate_qr', tree_id=tree.tree_id) | tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+</script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+function applyTag(tagName) {
+    // 1. Set the hidden tag input to the tag we clicked
+    document.getElementById('tagInput').value = tagName;
+
+    // 2. The 'viewInput' is already kept up-to-date by your switchView function!
+
+    // 3. Submit the form
+    document.getElementById('filterForm').submit();
+}
+function clearFilters() {
+
+    document.getElementById('tagInput').value = '';
+    const search = document.querySelector('input[name="search"]');
+    if(search) search.value = '';
+
+
+    document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
+
+
+    document.getElementById('filterForm').submit();
+}
+
 document.querySelectorAll(".filter-pill").forEach(btn => {
     btn.addEventListener("click", function () {
         this.parentElement.classList.toggle("active");
@@ -373,61 +449,238 @@ document.addEventListener("click", function(e) {
         }
     });
 });
-</script>
-<script>
-function printQR(imageUrl) {
-    const printWindow = window.open('', '_blank');
-
-    printWindow.document.write(`
-        <html>
-            <head>
-                <title>Print QR Code</title>
-                <style>
-                    body {
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        align-items: center;
-                        height: 100vh;
-                        margin: 0;
-                        font-family: sans-serif;
-                    }
-                    img {
-                        width: 250px;
-                        margin-bottom: 20px;
-                    }
-                    button {
-                        padding: 10px 20px;
-                        border: none;
-                        background: #0b422a;
-                        color: #fff;
-                        border-radius: 5px;
-                        cursor: pointer;
-                    }
-                </style>
-            </head>
-            <body>
-                <img src="${imageUrl}" />
-
-                <!-- Fallback button -->
-                <button onclick="window.close()">Close</button>
-
-                <script>
-                    window.onload = function() {
-                        window.focus();
-                        window.print();
-                    };
-
-                    window.onafterprint = function() {
-                        window.close();
-                    };
-                <\/script>
-            </body>
-        </html>
-    `);
-
-    printWindow.document.close();
+// ── Remember which view is active when filters are applied ──
+function rememberView() {
+    const active = document.getElementById('btn-map').classList.contains('active') ? 'map' : 'list';
+    document.getElementById('viewInput').value = active;
 }
+function switchView(view) {
+    const listView = document.getElementById('list-view');
+    const mapView  = document.getElementById('map-view');
+    const btnList  = document.getElementById('btn-list');
+    const btnMap   = document.getElementById('btn-map');
+
+    if (viewInput) {
+        viewInput.value = view;
+    }
+
+    if (view === 'map') {
+        listView.style.display = 'none';
+        mapView.style.display  = 'block';
+        btnList.classList.remove('active');
+        btnMap.classList.add('active');
+        if (!window._mapInitialised) {
+            initMap();
+        } else {
+            setTimeout(() => window._leafletMap && window._leafletMap.invalidateSize(), 100);
+        }
+    } else {
+        mapView.style.display  = 'none';
+        listView.style.display = 'block';
+        btnMap.classList.remove('active');
+        btnList.classList.add('active');
+    }
+}
+
+function initMap() {
+    window._mapInitialised = true;
+
+    const validTrees = TREE_DATA.filter(t => t.lat != null && t.lng != null);
+    const centre = validTrees.length
+        ? [validTrees[0].lat, validTrees[0].lng]
+        : [51.8993, -2.0782]; // Cheltenham fallback
+
+    const map = L.map('tree-map', {
+        center: centre,
+        zoom: 15,
+        scrollWheelZoom: false
+    });
+    window._leafletMap = map;
+
+    // CartoDB Voyager — clean, Apple Maps-like green feel
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+    }).addTo(map);
+
+    // Green circle tree icon — matches tree_detail page
+    const treeIcon = L.divIcon({
+        className: '',
+        html: `<div style="
+                    width:38px; height:38px;
+                    background:#0b422a;
+                    border-radius:50%;
+                    border:3px solid #fff;
+                    box-shadow:0 3px 10px rgba(0,0,0,0.30);
+                    display:flex; align-items:center; justify-content:center;">
+                <i class='fa fa-tree' style='color:#fbb034; font-size:16px;'></i>
+               </div>`,
+        iconSize:    [38, 38],
+        iconAnchor:  [19, 38],
+        popupAnchor: [0, -40]
+    });
+
+    // TREE_DATA already contains only filtered trees (Flask filtered them server-side)
+    // so markers automatically match whatever filters/search are active
+    validTrees.forEach(tree => {
+        const healthClass = tree.health === 'Healthy'         ? 'healthy'
+                          : tree.health === 'Needs Attention' ? 'needs'
+                          : 'critical';
+
+        const healthIcon = tree.health === 'Healthy'
+            ? '<i class="fa fa-leaf"></i>'
+            : tree.health === 'Needs Attention'
+            ? '<i class="fa fa-triangle-exclamation"></i>'
+            : '<i class="fa fa-circle-xmark"></i>';
+
+        const imgHtml = tree.image
+            ? `<img src="/static/${tree.image}" class="map-popup-img" alt="${tree.species}"
+                    onerror="this.outerHTML='<div class=map-popup-img-placeholder><i class=fa fa-tree></i></div>'">`
+            : `<div class="map-popup-img-placeholder"><i class="fa fa-tree"></i></div>`;
+
+        const sizeLabel = tree.size <= 5  ? 'Small'
+                        : tree.size <= 15 ? 'Medium'
+                        : 'Large';
+
+        // Tags with collapsible toggle
+        let tagsHtml = '';
+        if (tree.tags && tree.tags.length > 0) {
+            const uid = `tags-${tree.id}`;
+            const visibleTags = tree.tags.slice(0, 2)
+                .map(t => `<span class="mp-tag">#${t}</span>`).join('');
+            const hiddenTags = tree.tags.slice(2)
+                .map(t => `<span class="mp-tag">#${t}</span>`).join('');
+            const moreBtn = tree.tags.length > 2
+                ? `<button class="mp-tag-more" onclick="
+                        var el=document.getElementById('${uid}');
+                        var open=el.style.display!=='none';
+                        el.style.display=open?'none':'flex';
+                        this.innerHTML=open
+                            ? '<i class=\\'fa fa-chevron-down\\'></i> +${tree.tags.length - 2} more'
+                            : '<i class=\\'fa fa-chevron-up\\'></i> less';
+                   "><i class="fa fa-chevron-down"></i> +${tree.tags.length - 2} more</button>
+                   <div id="${uid}" class="mp-tag-extra" style="display:none">${hiddenTags}</div>`
+                : '';
+            tagsHtml = `<div class="mp-tag-section"><div class="mp-tags">${visibleTags}${moreBtn}</div></div>`;
+        }
+
+        // Adopted — shows who adopted it
+        const adoptedHtml = tree.adopted
+            ? `<div class="mp-adopted adopted">
+                   <i class="fa fa-user-check"></i>
+                   Adopted by <strong>${tree.adopter}</strong>
+               </div>`
+            : `<div class="mp-adopted available">
+                   <i class="fa fa-circle-dot"></i>
+                   Available to adopt
+               </div>`;
+
+        // QR section with download and print
+        const qrHtml = `
+            <div class="mp-qr-row">
+                <img src="${tree.qr_url}" class="mp-qr-img" alt="QR #${tree.id}">
+                <div class="mp-qr-actions">
+                    <a href="${tree.qr_url}"
+                       download="tree_${tree.id}_qr.png"
+                       class="mp-qr-btn" title="Download QR">
+                        <i class="fa fa-download"></i>
+                    </a>
+                    <button class="mp-qr-btn" title="Print QR"
+                        onclick="printQR('${tree.qr_url}')">
+                        <i class="fa fa-print"></i>
+                    </button>
+                </div>
+            </div>`;
+
+        const popup = `
+            <div class="map-popup">
+                <div class="mp-img-wrap">${imgHtml}</div>
+
+                <div class="mp-header-row">
+                    <div class="mp-title-col">
+                        <p class="mp-species">${tree.species}</p>
+                        <p class="mp-location">
+                            <i class="fa fa-location-dot"></i>
+                            ${tree.lat.toFixed(3)}, ${tree.lng.toFixed(3)}
+                        </p>
+                    </div>
+                    <span class="mp-health-badge ${healthClass}">
+                        ${healthIcon} ${tree.health}
+                    </span>
+                </div>
+
+                <div class="mp-body">
+                    <div class="mp-stats">
+                        <div class="mp-stat">
+                            <i class="fa fa-calendar-days"></i>
+                            <span class="mp-stat-val">${tree.age ?? '—'} yrs</span>
+                            <span class="mp-stat-lbl">Age</span>
+                        </div>
+                        <div class="mp-stat">
+                            <i class="fa fa-tree"></i>
+                            <span class="mp-stat-val">${sizeLabel}</span>
+                            <span class="mp-stat-lbl">Size</span>
+                        </div>
+                        <div class="mp-stat">
+                            <i class="fa fa-eye"></i>
+                            <span class="mp-stat-val">${tree.obs}</span>
+                            <span class="mp-stat-lbl">Observations</span>
+                        </div>
+                    </div>
+
+                    ${adoptedHtml}
+                    ${tagsHtml}
+                    ${qrHtml}
+
+                    <a href="${tree.detail_url}" class="mp-btn">
+                        View Details <i class="fa fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>`;
+
+        L.marker([tree.lat, tree.lng], { icon: treeIcon })
+            .addTo(map)
+            .bindPopup(popup, { maxWidth: 270, minWidth: 270 });
+    });
+
+    // Fit to all markers, capped at zoom 17 so it doesn't over-zoom single trees
+    setTimeout(() => {
+        map.invalidateSize();
+        if (validTrees.length > 1) {
+            map.fitBounds(validTrees.map(t => [t.lat, t.lng]), { padding: [40, 40], maxZoom: 17 });
+        } else if (validTrees.length === 1) {
+            map.setView([validTrees[0].lat, validTrees[0].lng], 16);
+        }
+    }, 150);
+}
+// ── Restore active view after filter apply ──
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'map') {
+        switchView('map');
+    }
+})();
+
+// ── QR print ──
+function printQR(imageUrl) {
+    const w = window.open('', '_blank');
+    w.document.write(`
+        <html><head><title>Print QR</title>
+        <style>
+            body { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; margin:0; font-family:sans-serif; }
+            img  { width:250px; margin-bottom:20px; }
+            button { padding:10px 20px; border:none; background:#0b422a; color:#fff; border-radius:5px; cursor:pointer; }
+        </style></head>
+        <body>
+            <img src="${imageUrl}"/>
+            <button onclick="window.close()">Close</button>
+            <script>window.onload=function(){window.focus();window.print();};window.onafterprint=function(){window.close()};<\/script>
+        </body></html>`);
+    w.document.close();
+}
+
+
 // Auto-dismiss import feedback after 6 seconds
 const fb = document.getElementById('importFeedback');
 if (fb) {
@@ -444,6 +697,23 @@ function dismissFeedback() {
         setTimeout(() => fb.remove(), 500);
     }
 }
+
+document.addEventListener("DOMContentLoaded", function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const savedView = urlParams.get('view');
+
+    if (savedView === 'map') {
+        switchView('map');
+    } else {
+        switchView('list');
+    }
+});
+
+
 </script>
+<!-- YOUR EXISTING JS ABOVE -->
+
+
+
 </body>
 </html>

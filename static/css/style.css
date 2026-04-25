@@ -1419,6 +1419,11 @@ font-weight: 600;
     border: 1px solid #fbb034;
     border-radius: 10px;
 }
+.active-filters .tag-pill a:hover {
+    color: #fbb034; /* Or any highlight color */
+    transform: scale(1.2);
+    display: inline-block;
+}
 .tag-pill.active {
     background: #0b422a;
     color: #fbb034;
@@ -1736,6 +1741,528 @@ font-weight: 600;
         padding: 5px 8px;
     }
 }
+/* ─────────────────────────────────────────────────────
+   LIST / MAP TOGGLE
+───────────────────────────────────────────────────── */
+
+.view-toggle {
+    display: flex;
+    align-items: center;
+    background: #f0f0f0;
+    border-radius: 25px;
+    padding: 3px;
+    gap: 2px;
+    width: fit-content;
+    margin: 18px auto 20px auto;
+}
+
+.view-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 22px;
+    border: none;
+    border-radius: 22px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    background: transparent;
+    color: #888;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.view-toggle-btn.active {
+    background: #0b422a;
+    color: #fbb034;
+    box-shadow: 0 2px 8px rgba(11, 66, 42, 0.20);
+}
+
+.view-toggle-btn i { font-size: 13px; }
+
+/* ─────────────────────────────────────────────────────
+   MAP / LIST VIEW SWITCHING
+───────────────────────────────────────────────────── */
+
+/* NEW — hides visually but keeps the container measurable */
+
+#map-view {
+    display: none;
+    width: 100%;
+}
+
+
+#list-view.hidden {
+    display: none;
+}
+
+
+
+
+/* ─────────────────────────────────────────────────────
+   MAP CONTAINER
+───────────────────────────────────────────────────── */
+
+#tree-map {
+    width: 100% !important;
+    height: 320px;
+    border-radius: 12px;
+    border: 2.5px solid #0b422a;
+    margin-top: 16px;
+    position: relative;
+
+
+}
+
+#tree-map img{
+    max-width: none !important;
+}
+
+@media (max-width: 768px) {
+    #tree-map { height: 400px;}
+}
+
+/* ─────────────────────────────────────────────────────
+   MAP MINI POPUP CARD
+───────────────────────────────────────────────────── */
+
+.map-popup { font-family: 'Open Sans', sans-serif; width: 230px; }
+
+.map-popup-img {
+    width: 100%; height: 105px;
+    object-fit: cover; display: block;
+}
+
+.map-popup-img-placeholder {
+    width: 100%; height: 105px;
+    background: #e8f5ee;
+    display: flex; align-items: center; justify-content: center;
+    color: #0b422a; font-size: 30px;
+}
+
+.map-popup-body { padding: 10px 13px 12px; }
+
+.map-popup-species {
+    font-size: 14px; font-weight: 800; color: #0b422a;
+    margin: 0 0 5px 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.map-popup-row {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11.5px; color: #555; margin-bottom: 3px;
+}
+
+.map-popup-row i { color: #0b422a; width: 12px; flex-shrink: 0; }
+
+.map-popup-badges { display: flex; gap: 5px; margin: 7px 0 8px; }
+
+.map-popup-badge {
+    font-size: 10px; font-weight: 700;
+    padding: 3px 9px; border-radius: 10px;
+}
+
+.map-popup-badge.healthy  { background:#e8f5e9; color:#2e7d32; border:1px solid #c8e6c9; }
+.map-popup-badge.needs    { background:#fff8e1; color:#f57f17; border:1px solid #ffe082; }
+.map-popup-badge.critical { background:#fdecea; color:#c62828; border:1px solid #f5c6cb; }
+
+.map-popup-qr {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 10px; padding: 6px 0;
+    border-top: 1px solid #f0f0f0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.map-popup-qr-img {
+    width: 48px; height: 48px;
+    border-radius: 4px; border: 1px solid #e0e0e0;
+}
+
+.map-popup-qr-dl {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px;
+    background: #f2f8f5; border: 1px solid #c8ddd2;
+    border-radius: 6px; color: #0b422a; font-size: 12px;
+    text-decoration: none; transition: background 0.15s;
+}
+
+.map-popup-qr-dl:hover { background: #0b422a; color: #fbb034; }
+
+.map-popup-btn {
+    display: block; width: 100%; padding: 8px 0;
+    background: #0b422a; color: #fbb034;
+    text-align: center; border-radius: 6px;
+    font-size: 12px; font-weight: 700;
+    text-decoration: none; transition: background 0.15s;
+}
+
+.map-popup-btn:hover { background: #083320; color: #fbb034; }
+
+/* Leaflet popup chrome overrides */
+.leaflet-popup-content-wrapper {
+    padding: 0 !important;
+    border-radius: 10px !important;
+    overflow: hidden;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.14) !important;
+}
+
+.leaflet-popup-content { margin: 0 !important; width: 230px !important; }
+.leaflet-popup-tip-container { margin-top: -1px; }
+
+/* CRITICAL LEAFLET TILE FIX */
+.leaflet-container img.leaflet-tile {
+    max-width: none !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Ensure the map container has a defined size and relative positioning */
+#tree-map {
+    display: block;
+    width: 100% !important;
+    height: 520px !important;
+    position: relative;
+    overflow: hidden;
+    background: #f0f0f0; /* Placeholder color while tiles load */
+}
+
+/* Fix for zoom controls and markers potentially disappearing */
+.leaflet-control-container .leaflet-top,
+.leaflet-control-container .leaflet-bottom {
+    z-index: 1000 !important;
+}
+
+/* Ensure tiles fade in correctly without breaking layout */
+.leaflet-tile-container {
+    pointer-events: none;
+}
+/* --- LEAFLET OVERRIDE SHIELD --- */
+#tree-map {
+    width: 100% !important;
+    height: 520px !important;
+    position: relative;
+    outline: none;
+    z-index: 1; /* Keep it below dropdowns but above background */
+}
+
+/* This stops your global 'img' rules from breaking map tiles */
+.leaflet-container img.leaflet-tile {
+    max-width: none !important;
+    max-height: none !important;
+    visibility: inherit !important;
+    padding: 0 !important;
+}
+
+/* Fix for the buttons being unclickable */
+.view-toggle, .filter-bar, .mobile-nav, .search-bar-container {
+    position: relative;
+    z-index: 1001; /* Must be higher than 1000 (Leaflet's max) */
+}
+
+/* Ensure the map view wrapper doesn't collapse */
+#map-view {
+    width: 100%;
+    display: none;
+}
+/* --- LEAFLET MAP REPAIR --- */
+
+/* 1. Prevent global image styles from stretching map tiles */
+.leaflet-container img.leaflet-tile {
+    max-width: none !important;
+    max-height: none !important;
+    width: 256px !important;
+    height: 256px !important;
+}
+
+/* 2. Fix the container behavior */
+#tree-map {
+    width: 100% !important;
+    height: 520px !important;
+    position: relative;
+    outline: none;
+    z-index: 1;
+    display: block;
+}
+
+/* 3. Ensure the toggle buttons stay on top of the map */
+.view-toggle, .mobile-nav, .search-bar-container, .filter-bar {
+    position: relative;
+    z-index: 1001;
+}
+
+/* 4. Fix for marker shadows and icons */
+.leaflet-marker-icon, .leaflet-marker-shadow {
+    max-width: none !important;
+}
+
+#map-view {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto 20px auto;
+}
+
+#tree-map {
+    width: 100%;
+    height: 320px;
+    border-radius: 12px;
+    border: 2px solid #0b422a;
+    margin-top: 12px;
+}
+
+
+
+@media (max-width: 768px) {
+    #tree-map {
+        height: 250px;
+    }
+}
+/* ─────────────────────────────────────────────────────
+   MAP POPUP CARD v2
+───────────────────────────────────────────────────── */
+
+.map-popup {
+    width: 270px;
+    font-family: 'Sora', 'Open Sans', sans-serif;
+    background: #fff;
+}
+
+/* Image */
+.mp-img-wrap { width: 100%; height: 130px; overflow: hidden; }
+
+.mp-img-wrap .map-popup-img {
+    width: 100%; height: 130px;
+    object-fit: cover; display: block;
+}
+
+.mp-img-wrap .map-popup-img-placeholder {
+    width: 100%; height: 130px;
+    background: linear-gradient(135deg, #d4edda, #e8f5ee);
+    display: flex; align-items: center;
+    justify-content: center; color: #0b422a; font-size: 36px;
+}
+
+/* Header row — species left, health badge right */
+.mp-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px 0;
+}
+
+.mp-title-col { flex: 1; min-width: 0; }
+
+.mp-species {
+    font-size: 15px;
+    font-weight: 800;
+    color: #111;
+    margin: 0 0 3px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mp-location {
+    font-size: 11px;
+    color: #888;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mp-location i { color: #0b422a; font-size: 11px; }
+
+/* Health badge — sits right of title, below image */
+.mp-health-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.mp-health-badge.healthy  { background:#e8f5e9; color:#1b5e20; border:1px solid #c8e6c9; }
+.mp-health-badge.needs    { background:#fff8e1; color:#e65100; border:1px solid #ffe082; }
+.mp-health-badge.critical { background:#fdecea; color:#b71c1c; border:1px solid #f5c6cb; }
+
+.mp-health-badge i { font-size: 11px; }
+
+/* Body */
+.mp-body { padding: 10px 12px 12px; }
+
+/* Stats row */
+.mp-stats {
+    display: flex;
+    border: 1px solid #ebebeb;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 9px;
+    background: #fafafa;
+}
+
+.mp-stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 4px 6px;
+    border-right: 1px solid #ebebeb;
+    gap: 3px;
+}
+
+.mp-stat:last-child { border-right: none; }
+.mp-stat i          { font-size: 13px; color: #0b422a; }
+.mp-stat-val { font-size: 13px; font-weight: 800; color: #0b422a; line-height: 1; }
+.mp-stat-lbl { font-size: 9px; color: #fbb034; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1; font-weight: 700; }
+
+/* Adopted / Available */
+.mp-adopted {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 5px 8px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.mp-adopted.adopted   { background:#e8f5e9; color:#1b5e20; }
+.mp-adopted.available { background:#fff8e1; color:#b45309; }
+
+/* Tags */
+.mp-tag-section { margin-bottom: 9px; }
+
+.mp-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
+
+.mp-tag {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    background: #f0f7f3;
+    border: 1px solid #c8ddd2;
+    border-radius: 10px;
+    color: #0b422a;
+}
+
+.mp-tag-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    background: #0b422a;
+    color: #fbb034;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.mp-tag-more:hover { background: #083320; }
+
+.mp-tag-extra {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+/* View Details */
+.mp-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 9px 0;
+    background: #0b422a;
+    color: #fbb034;
+    border-radius: 7px;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+
+.mp-btn:hover { background: #083320; color: #fbb034; }
+
+/* QR row */
+.mp-qr-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    margin-bottom: 9px;
+    border-top: 1px solid #f0f0f0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.mp-qr-img {
+    width: 52px;
+    height: 52px;
+    border-radius: 5px;
+    border: 1px solid #e0e0e0;
+    flex-shrink: 0;
+}
+
+.mp-qr-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.mp-qr-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: #f2f8f5;
+    border: 1px solid #c8ddd2;
+    border-radius: 7px;
+    color: #0b422a;
+    font-size: 13px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.mp-qr-btn:hover {
+    background: #0b422a;
+    color: #fbb034;
+}
+
+/* Leaflet chrome */
+.leaflet-popup-content-wrapper {
+    padding: 0 !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.16) !important;
+}
+
+.leaflet-popup-content { margin: 0 !important; width: 270px !important; }
+.leaflet-popup-tip-container { margin-top: -1px; }
+
+/* ─────────────────────────────────────────────────────
+   END MAP POPUP v2
+───────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────
+   END MAP
+───────────────────────────────────────────────────── */
 
 /* ─────────────────────────────────────────────────────
    END IMPORT / EXPORT
