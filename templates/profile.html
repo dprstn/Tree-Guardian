@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Tree Guardian</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+</head>
+<body class="explore-body">
+
+    <div class="main-content profile-layout">
+        <a href="{{ url_for('homepage') }}" class="btn-back"><i class="fa-solid fa-arrow-left"></i> Back</a>
+
+        <!-- Main Card -->
+        <div class="profile-main-card">
+            <div class="profile-avatar-wrap">
+                <!-- If user has default pic, show the FontAwesome Icon -->
+                {% if user.profile_pic == 'default_user.png' %}
+                    <div class="profile-avatar-lg default-avatar-bg">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                {% else %}
+                    <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_pic) }}" class="profile-avatar-lg">
+                {% endif %}
+
+                <button class="cam-btn-overlay" onclick="document.getElementById('editModal').style.display='flex'">
+                    <i class="fa-solid fa-camera"></i>
+                </button>
+            </div>
+
+            <h1>{{ user.first_name }} {{ user.last_name }}</h1>
+            <p>@{{ user.username }}</p>
+            {% if current_badge %}
+            <div class="current-badge">
+
+                <div class="badge-icon-main">
+                    <i class="{{ current_badge.icon_class }}"></i>
+                </div>
+
+                <span class="badge-name">
+                    {{ current_badge.name }}
+                </span>
+
+            </div>
+            {% endif %}
+
+            <button class="btn-pill btn-edit-profile" onclick="document.getElementById('editModal').style.display='flex'">
+                <i class="fa-solid fa-user-pen"></i> Edit Profile
+            </button>
+
+            <div class="points-display-bar">
+                <div class="p-bar-content">
+                    <i class="fa-solid fa-leaf"></i>
+                    <div class="p-bar-text">
+                        <span class="p-bar-val">{{ points }}</span>
+                        <span class="p-bar-lab">Total Points</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="section-heading">Badges & Activity</h2>
+
+        <div class="activity-feed">
+            <!-- Badges Section (Appears if user has badges) -->
+            <div class="badges-row">
+                {% for badge in badges %}
+                    <div class="badge-mini-card">
+                        <i class="{{ badge.icon_class }}"></i>
+                        <span>{{ badge.name }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Activity Feed Section -->
+
+           <div class="activity-timeline">
+
+            {% for item in activity %}
+            <div class="timeline-item">
+
+                <div class="timeline-dot"></div>
+
+                <div class="timeline-card">
+
+                    <div class="timeline-header">
+                        <span class="badge-label">Badge Earned</span>
+                        <span class="timeline-date">
+                            {{ item.created_at.strftime('%d %b %Y') if item.created_at else '' }}<br>
+                            {{ item.created_at.strftime('%I:%M %p') if item.created_at else '' }}
+                        </span>
+                    </div>
+
+                    <div class="timeline-body">
+
+                        <div class="badge-icon">
+                            <i class="fa-solid fa-tree"></i>
+                        </div>
+
+                        <div class="timeline-text">
+                            <strong>{{ item.reason }}</strong>
+                            <p>You earned this by gaining {{ item.points }} points.</p>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+            {% endfor %}
+
+        </div>
+    <!-- Edit Modal (Logic Fixed for centering) -->
+    <div id="editModal" class="modal-overlay" onclick="if(event.target == this) this.style.display='none'">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit Profile</h2>
+                <button class="close-x" onclick="document.getElementById('editModal').style.display='none'">&times;</button>
+            </div>
+
+            <form action="{{ url_for('edit_profile') }}" method="POST" enctype="multipart/form-data">
+                <div class="edit-photo-section">
+                    <label class="input-label-gray">Profile Photo</label>
+                    <div class="edit-avatar-wrapper">
+                        {% if user.profile_pic == 'default_user.png' %}
+                            <div class="edit-avatar-preview default-avatar-bg"><i class="fa-solid fa-user"></i></div>
+                        {% else %}
+                            <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_pic) }}" class="edit-avatar-preview">
+                        {% endif %}
+                    </div>
+                    <label for="file-upload" class="btn-change-photo"><i class="fa-solid fa-upload"></i> Change Photo</label>
+                    <input id="file-upload" type="file" name="profile_pic" accept="image/*" style="display:none;">
+                </div>
+
+                <div class="form-group-modern"><label>Username</label><input type="text" name="username" value="{{ user.username }}" required></div>
+                <div class="form-row-modern">
+                    <div class="form-group-modern"><label>First Name</label><input type="text" name="first_name" value="{{ user.first_name }}" required></div>
+                    <div class="form-group-modern"><label>Last Name</label><input type="text" name="last_name" value="{{ user.last_name }}" required></div>
+                </div>
+                <div class="form-group-modern"><label>Date of Birth</label><input type="date" name="dob" value="{{ user.dob }}"></div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel-modern" onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn-save-modern">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -7,15 +7,14 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
 </head>
+
 <body class="homepage-body">
 
 
-    <div class="nav-right">
-        <a href="{{ url_for('logout') }}" class="btn-orange-logout">Logout</a>
-    </div>
 
 
     <nav class="mobile-nav">
+        <div style="flex: 1;"></div>
         <div class="nav-center">
             <a href="{{ url_for('homepage') }}" class="nav-item">
                 <i class="fa-solid fa-house"></i> Home
@@ -32,6 +31,24 @@
                 <i class="fa-solid fa-pen-to-square"></i> Add a Tree
             </a>
             {% endif %}
+        </div>
+        <div class="nav-right-profile">
+            <div class="profile-dropdown">
+                <div class="profile-trigger orange-theme">
+                    {% if user.profile_pic and user.profile_pic != 'default_user.png' %}
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_pic) }}"
+                             class="nav-avatar">
+                    {% else %}
+                        <i class="fa-solid fa-user"></i>
+                    {% endif %}
+                    <span class="user-name-text">{{ user.username }}</span>
+                    <i class="fa fa-chevron-down"></i>
+                </div>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('profile') }}"><i class="fa-solid fa-circle-user"></i> Profile</a>
+                    <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -63,6 +80,13 @@
         <h2 class="section-heading">DASHBOARD STATS</h2>
 
         <div class="stats-grid">
+            <div class="stat-card wide-label points-theme">
+                <i class="fa-solid fa-leaf"></i>
+                    <span class="p-label">YOUR TOTAL CONTRIBUTION:</span>
+                    <span class="p-value">{{ points }}</span>
+                    <span class="p-sub">Points</span>
+            </div>
+
             <div class="stat-card wide-label">
                 <span class="stat-number">{{ total_trees_in_db }}</span>
                 <i class="fa-solid fa-tree"></i>

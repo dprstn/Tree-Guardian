@@ -2649,3 +2649,1114 @@ font-weight: 600;
 .map-marker-alert i {
     font-size: 8px !important; /* Very tiny icon */
 }
+/* Specific logic for Global Tags section (Allows 2 rows) */
+/* --- Mobile-Friendly Global Tags Section --- */
+.tag-expand-row {
+    margin: 15px auto;
+    padding: 15px;
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 15px;
+    max-width: 100%; /* Ensures it doesn't break out of the screen */
+}
+
+#global-tag-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px; /* Slightly more gap for mobile tapping */
+    max-height: 78px; /* Fits exactly 2 rows on most mobile devices */
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out;
+}
+
+#global-tag-inner.expanded {
+    max-height: 2000px; /* Large enough for many tags */
+}
+
+/* Ensure hidden tags appear when expanded */
+#global-tag-inner.expanded .tag-hidden {
+    display: inline-flex !important;
+}
+
+/* The "+ more" Button - Mobile Optimized */
+.tag-more-btn {
+    border: none;
+    background: #0b422a; /* Forest Green */
+    color: #e8a838;      /* Gold */
+    padding: 8px 16px;   /* Larger padding for touch targets */
+    border-radius: 20px;
+    font-weight: 800;
+    cursor: pointer;
+    font-size: 12px;
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.tag-more-btn:active {
+    transform: scale(0.95); /* Feedback for mobile tap */
+}
+
+/* Responsive adjustment for tiny screens */
+@media (max-width: 400px) {
+    .tag-pill {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+    #global-tag-inner {
+        max-height: 72px; /* Adjust height for smaller fonts */
+    }
+}
+/* --- MOBILE FRIENDLY TREE DETAILS --- */
+
+.detail-header-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.detail-header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.detail-location-text {
+    color: #666;
+    margin: 0;
+    font-size: 14px;
+}
+
+/* Tags Layout */
+.detail-tags-wrapper {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+.detail-tag-label {
+    font-weight: 800;
+    color: #0b422a;
+    font-size: 13px;
+    padding-top: 8px; /* Aligns with pills */
+    white-space: nowrap;
+}
+
+/* Smart Tags Logic */
+#detail-tag-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 38px; /* Strict one-row limit */
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out;
+}
+
+#detail-tag-inner.expanded {
+    max-height: 500px;
+}
+
+/* --- MOBILE SPECIFIC OVERRIDES --- */
+@media (max-width: 600px) {
+    .species-header {
+        font-size: 26px; /* Smaller text for mobile */
+    }
+
+    .detail-header-main {
+        flex-direction: row; /* Keep name and badge on one line if possible */
+    }
+
+    /* Stack info grid boxes 1 per row on very small screens */
+    .info-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px;
+    }
+
+    /* Make Adoption button full width on mobile */
+    .adoption-status-box {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+        gap: 15px;
+    }
+
+    .btn-adopt {
+        width: 100%;
+    }
+}
+
+
+.explore-body .landscape-container {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+
+/* --- 1. NAVIGATION: CENTERED TABS + RIGHT PROFILE --- */
+.mobile-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    position: relative;
+    width: 100%;
+}
+
+/* This targets the empty div you have at the start of your nav */
+.mobile-nav > div:first-child {
+    flex: 1; /* Acts as a left-side weight */
+}
+
+.nav-center {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    align-items: center;
+    /* No flex:1 here so it stays compact in the middle */
+}
+
+.nav-right-profile {
+    flex: 1; /* Acts as a right-side weight to balance the center */
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+/* Navigation Item Styling */
+.nav-item {
+    text-decoration: none;
+    color: #333;
+    font-weight: 800;
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: 0.3s;
+}
+
+.nav-item i {
+    color: #0b422a; /* Forest Green */
+    font-size: 22px;
+    margin-bottom: 4px;
+}
+
+.nav-item:hover {
+    color: #ed8f1c;
+}
+
+/* --- 2. ORANGE PROFILE BUTTON --- */
+.profile-trigger.orange-theme {
+    background-color: #ed8f1c !important; /* Original Orange */
+    color: #000 !important;              /* Black Text */
+    padding: 8px 15px !important;
+    border-radius: 30px !important;
+    font-weight: 800 !important;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    border: none !important;
+}
+
+
+/* Fix for the hover gap */
+.profile-dropdown {
+    position: relative;
+    padding-bottom: 10px;
+    margin-bottom: -10px;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 45px;
+    background: #ffffff;
+    min-width: 160px;
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15); /* Soft shadow for "Real World" feel */
+    overflow: hidden;
+    z-index: 5000;
+    border: 1px solid #eee;
+}
+
+.profile-dropdown:hover .dropdown-content {
+    display: block;
+}
+.dropdown-content a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    text-decoration: none;
+    color: #333 !important;
+    font-size: 14px;
+    font-weight: 700;
+    transition: 0.2s;
+}
+
+.dropdown-content a:hover {
+    background-color: #f4fdf4;
+    color: #042c1b !important;
+}
+
+.dropdown-content a i {
+    color: #042c1b;
+    font-size: 16px;
+}
+/* ============================================================
+   ULTIMATE PROFILE PAGE FIX (Matches Image Exactly)
+   ============================================================ */
+
+/* 1. Force the page to center everything like a mobile app */
+.explore-body .main-content {
+    max-width: 500px !important;
+    margin: 40px auto !important;
+    padding: 20px !important;
+    display: block !important;
+    text-align: center !important;
+}
+
+/* 2. Style the Main Profile Card */
+.profile-main-card {
+    background: #ffffff !important;
+    border-radius: 20px !important;
+    padding: 40px 20px !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05) !important;
+    border: 1px solid #eee !important;
+    margin-bottom: 30px !important;
+}
+
+/* 3. The Avatar (Fixes the empty circle in your screenshot) */
+.profile-avatar-wrap {
+    position: relative;
+    display: inline-block;
+    width: 120px;
+    height: 120px;
+    margin-bottom: 15px;
+}
+
+.profile-avatar-lg {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 4px solid #f4a261; /* orange ring like image */
+}
+
+/* The Camera Icon Button */
+.cam-btn-overlay {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background: #0b422a !important;
+    color: white !important;
+    border: 3px solid white !important;
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+/* 4. Text and Edit Button Styling */
+.profile-main-card h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1b4332;
+    margin-top: 15px;
+}
+.profile-main-card p {
+    color: #6c757d;
+    margin-bottom: 10px;
+}
+
+/* Fixes the "Edit Profile" button appearing as a standard HTML button */
+.btn-edit-profile {
+    border: 1px solid #2e7d32;
+    background: transparent;
+    color: #2e7d32;
+    padding: 8px 14px;
+    border-radius: 10px;
+    margin-top: 10px;
+    transition: 0.2s;
+}
+
+/* 5. The Points Bar (Centered and sized) */
+.points-display-bar {
+    margin-top: 20px;
+    background: #f1f8f4;
+    border-radius: 14px;
+    padding: 20px;
+}
+
+.p-bar-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.p-bar-content i { color: #0b422a; font-size: 24px; }
+.p-bar-val {
+    font-size: 26px;
+    font-weight: bold;
+    color: #1b4332;
+}
+.p-bar-lab { font-size: 10px !important; font-weight: 800 !important; color: #999; text-transform: uppercase; }
+
+/* 6. HIDE THE MODAL (Fixes the form showing at the bottom of your screenshot) */
+.modal-overlay {
+    display: none; /* This is the line that hides the form until clicked */
+    position: fixed !important;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6) !important;
+    z-index: 9999 !important;
+    overflow-y: auto;
+}
+
+/* Style the modal box itself */
+.modal-box {
+    background: white !important;
+    max-width: 450px !important;
+    margin: 50px auto !important;
+    border-radius: 20px !important;
+    padding: 30px !important;
+}
+
+/* 7. Activity Feed (Left Aligned) */
+.activity-card {
+    background: white !important;
+    border: 1px solid #f0f0f0 !important;
+    border-radius: 15px !important;
+    padding: 15px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 15px;
+    margin-bottom: 10px !important;
+    text-align: left !important;
+}
+
+.activity-icon-circle {
+    width: 45px;
+    height: 45px;
+    background: #e6f4ea;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+/* --- MODERN EDIT PROFILE MODAL --- */
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-box {
+    background: #ffffff;
+    width: 90%;
+    max-width: 420px;
+    border-radius: 24px;
+    padding: 30px;
+    position: relative;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.modal-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #333;
+    margin: 0;
+}
+
+.close-x {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #999;
+    cursor: pointer;
+}
+
+/* Photo Section */
+.edit-photo-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.input-label-gray {
+    align-self: flex-start;
+    font-size: 13px;
+    font-weight: 600;
+    color: #444;
+    margin-bottom: 10px;
+}
+
+.edit-avatar-wrapper {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin-bottom: 15px;
+}
+
+.edit-avatar-preview {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.cam-icon-small {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: #0b422a;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.btn-change-photo {
+    border: 1.5px solid #ddd;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-change-photo:hover { background: #f8f9fa; }
+
+.file-hint {
+    font-size: 11px;
+    color: #bbb;
+    margin-top: 8px;
+}
+
+/* Inputs */
+.form-group-modern {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.form-group-modern label {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #333;
+}
+
+.form-group-modern input {
+    background: #f8f9fa;
+    border: 1px solid #eee;
+    padding: 12px 15px;
+    border-radius: 12px;
+    font-size: 14px;
+    outline: none;
+}
+
+.form-group-modern input:focus { border-color: #0b422a; }
+
+.field-hint {
+    font-size: 11px;
+    color: #999;
+    margin-top: 5px;
+}
+
+.form-row-modern {
+    display: flex;
+    gap: 15px;
+}
+
+/* Modal Buttons */
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 30px;
+}
+
+.btn-save-modern {
+    flex: 1.5;
+    background: #0b422a;
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.btn-cancel-modern {
+    flex: 1;
+    background: #ffffff;
+    color: #0b422a;
+    border: 1.5px solid #eee;
+    padding: 14px;
+    border-radius: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 480px) {
+    .modal-box {
+        width: 95%;
+        padding: 20px;
+    }
+    .form-row-modern {
+        flex-direction: column;
+        gap: 0;
+    }
+}
+
+/* --- 3. DASHBOARD ALIGNMENT & COLORS --- */
+.main-content {
+    max-width: 500px !important; /* Forces the boxy mobile app look */
+    margin: 0 auto !important;   /* Centers the whole dashboard */
+    padding: 20px;
+    text-align: center;
+}
+
+/* THE GREEN BOXES (MATCHING HEALTH STATUS GREEN) */
+.stat-card, .wide-label, .points-hero-small {
+    background-color: #0b422a !important; /* Proper Forest Green */
+    color: #fbb034 !important;           /* Gold text */
+    border-radius: 15px !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* SLIM BARS */
+.wide-label {
+    grid-column: 1 / -1 !important;
+    min-height: 45px !important;
+    flex-direction: row !important;
+    gap: 15px;
+    margin-bottom: 8px;
+}
+
+/* TALLER POINTS BOX (YOUR REQUEST) */
+.points-hero-small {
+    grid-column: 1 / -1 !important;
+    min-height: 80px !important; /* Increased height */
+    flex-direction: column !important;
+    padding: 10px !important;
+    margin-bottom: 10px;
+}
+
+.points-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Text Sizing & Bolding */
+.stat-number, .p-value {
+    font-size: 24px !important;
+    font-weight: 900 !important;
+}
+
+.stat-label, .p-label, .p-sub {
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+}
+/* Fix for the leaking layout and centering */
+.profile-main-card {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    overflow: hidden !important; /* Prevents text leaking outside */
+}
+
+/* Default Avatar Icon Style */
+.default-avatar-bg {
+    background-color: #f0f0f0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    color: #0b422a !important; /* Dark Green Icon */
+}
+
+.profile-avatar-lg.default-avatar-bg i {
+    font-size: 50px;
+}
+
+.edit-avatar-preview.default-avatar-bg i {
+    font-size: 40px;
+}
+
+/* Badges Row Styling */
+.badges-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+
+.badge-mini-card {
+    background: #e6f4ea;
+    color: #2e7d32;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.badge-mini-card i {
+    font-size: 20px;
+    color: #ed8f1c; /* Gold/Orange */
+    margin-bottom: 5px;
+}
+
+.badge-mini-card span {
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* Fixed Modal logic for proper centering */
+.modal-overlay {
+    display: none; /* Changed by JS to 'flex' */
+    justify-content: center;
+    align-items: center;
+}
+/* ===============================
+   PROFILE PAGE - DESKTOP LAYOUT
+================================= */
+
+.profile-layout {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 30px;
+    padding: 40px 60px;
+    background: #f6f8f7;
+    min-height: 100vh;
+}
+
+/* Create 2-column layout WITHOUT changing your HTML */
+.profile-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 30px;
+    align-items: start;
+}
+
+.profile-main-card {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+    text-align: left;
+}
+
+/* RIGHT SIDE (badges + activity) */
+.section-heading {
+    grid-column: 2;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1b4332;
+}
+
+
+.activity-feed {
+    grid-column: 2;
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.05);
+}
+
+/* Improve spacing */
+.badges-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* Activity styling (clean like your UI image) */
+.activity-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 18px;
+    border-radius: 14px;
+    background: #fafafa;
+    margin-bottom: 12px;
+    border: 1px solid #eee;
+}
+
+.activity-icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #e6f4ea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2e7d32;
+}
+
+/* Points bar cleaner */
+.points-display-bar {
+    margin-top: 20px;
+    border-radius: 12px;
+}
+/* REMOVE centered look */
+.main-content.profile-layout {
+    max-width: none;
+    width: 100%;
+}
+.btn-edit-profile:hover {
+    background: #2e7d32;
+    color: white;
+}
+@media (max-width: 768px) {
+
+    .profile-layout {
+        grid-template-columns: 1fr;
+        padding: 20px;
+    }
+
+    .profile-main-card {
+        text-align: center;
+    }
+
+    .profile-avatar-wrap {
+        display: flex;
+        justify-content: center;
+    }
+
+    .section-heading,
+    .activity-feed {
+        grid-column: 1;
+    }
+
+    .activity-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .btn-edit-profile {
+        width: 100%;
+    }
+}
+/* ===== TIMELINE ===== */
+
+.activity-timeline {
+    position: relative;
+    margin-top: 20px;
+    padding-left: 40px;
+}
+
+.activity-timeline::before {
+    content: '';
+    position: absolute;
+    left: 16px;              /* move line */
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: none;
+    border-left: 2px dashed #2e7d32;
+}
+.timeline-item {
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -24px;              /* SAME as line */
+    top: 12px;
+    width: 20px;
+    height: 20px;
+    background: #1abc9c;
+    border-radius: 50%;
+    border-shadow: 0 0 0 2px #1abc9c;  /* center perfectly */
+    border: 3px solid white;
+}
+
+.timeline-card {
+    background: white;
+    border-radius: 16px;
+    padding: 18px;
+    border: 1px solid #eee;
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #6c757d;
+    margin-bottom: 10px;
+}
+
+.timeline-body {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.badge-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: #e6f4ea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2e7d32;
+}
+/* TIMELINE LINE */
+.activity-timeline::before {
+    content: '';
+    position: absolute;
+    left: 24px;              /* anchor point */
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: #2e7d32;
+}
+.nav-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 6px;
+}
+/* CURRENT BADGE UNDER NAME */
+.current-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    background: #f4e1b5;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    color: #5c4b00;
+}
+
+/* icon */
+.badge-icon-main {
+    width: 26px;
+    height: 26px;
+    background: #2e7d32;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+.flash-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 999;
+}
+
+.flash {
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+}
+
+.flash.success { background: #2ecc71; }
+.flash.danger { background: #e74c3c; }
+.flash.warning { background: #f39c12; }
+
+/* TIMELINE DOT */
+.tagged-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.tagged-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.tagged-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tname {
+    font-weight: 600;
+}
+
+.thandle {
+    font-size: 13px;
+    color: #666;
+}
+
+.tmeta {
+    font-size: 12px;
+    color: #888;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.tnotes {
+    font-size: 13px;
+    color: #444;
+    margin-top: 4px;
+}
+
+.view-qr-btn {
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: white;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+body {
+    font-family: 'Inter', sans-serif;
+}
+/* MAIN NAME */
+.tname {
+    font-size: 16px;      /* ⬅ bigger */
+    font-weight: 600;
+    color: #111;
+}
+
+/* USERNAME */
+.thandle {
+    font-size: 14px;      /* ⬅ slightly bigger */
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+/* DATE + META */
+.tmeta {
+    font-size: 13px;      /* ⬅ clearer */
+    color: #6b7280;
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+/* NOTES */
+.tnotes {
+    font-size: 15px;      /* ⬅ more readable */
+    color: #333;
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+/* BADGE */
+.badge-role {
+    font-size: 12px;
+    padding: 4px 10px;
+}
+.tagged-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.tlocation {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #6b7280;
+    font-size: 13px;
+}
+.form-group-modern label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 500;
+}
+.input-modern {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+}
+.tlocation {
+    margin-left: 6px;
+    color: #666;
+    font-size: 12px;
+}
+.modal-cta {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    margin-top: 10px;
+}
+.rec-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.activity-tag-chip {
+    color: #0b422a;
+    font-weight: 600;
+}
+.tag-inline {
+    color: #0b422a;     /* dark green */
+    font-weight: 600;
+}

@@ -1,10 +1,13 @@
 import csv
 import io
 import re
+
+
 from flask import Flask, flash, render_template, request, redirect, url_for, session, get_flashed_messages, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta, timezone
-from database import db, User, Adoption, Observation, Observation_type, Tree, Species, Tag, TreeTag
+from database import db, User, Adoption, Observation, Observation_type, Tree, Species, Tag, TreeTag, LoyaltyLedger, \
+    Badge, UserBadge, UserTreeTag, uk_tz
 from flask_mail import Mail, Message
 from sqlalchemy import or_, func, case
 import qrcode
@@ -33,6 +36,9 @@ UPLOAD_FOLDER = 'static/uploads/trees'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 app.config['UPLOAD_FOLDER'] = "static/uploads/trees"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+PROFILE_UPLOAD_FOLDER = os.path.join('static', 'uploads', 'profiles')
+app.config['PROFILE_UPLOAD_FOLDER'] = PROFILE_UPLOAD_FOLDER
+os.makedirs(PROFILE_UPLOAD_FOLDER, exist_ok=True)
 
 BASE_URL = os.environ.get("BASE_URL", "https://127.0.0.1:5000")
 
@@ -48,57 +54,7 @@ db.init_app(app)
 
 
 
-with app.app_context():
-    db.create_all()
-    existing_admin = User.query.filter_by(username="Preston").first()
 
-    if Species.query.count() == 0:
-        species_list = [
-            Species(species_name="Oak"),
-            Species(species_name="Maple"),
-            Species(species_name="Pine"),
-            Species(species_name="Birch"),
-            Species(species_name="Cherry")
-        ]
-        db.session.add_all(species_list)
-        db.session.commit()
-        print("All types of Species Added!")
-
-    if not existing_admin:
-        admin = User(first_name = "Preston",
-                     last_name = "De Sousa",
-                     username = "Preston",
-                     email="quietgardenercollective@gmail.com",
-                     role = "admin",
-                     dob=date(2004,10,4),
-                     hash_password=generate_password_hash("Preston123"),
-                     is_active=False,
-                     email_verified=True)
-
-        db.session.add(admin)
-        db.session.commit()
-        print("ADMIN CREATED !!")
-
-    if Observation_type.query.count() == 0:
-        obs_types = [
-            Observation_type(observation_category="Wildlife", observation_report="Wildlife Sighting"),
-            Observation_type(observation_category="Disease", observation_report="Health Alert / Disease"),
-        ]
-        db.session.add_all(obs_types)
-        db.session.commit()
-        print("Observation types seeded!")
-
-
-
-
-    else:
-        if existing_admin.role != "admin":
-            existing_admin.role = "admin"
-            db.session.commit()
-            print("------PRESTON ROLE UPDATED TO ADMIN")
-
-        else:
-            print("----------PRESTON IS ALREADY ADMIN")
 
 
 def isEmailValid(email):
@@ -173,6 +129,7 @@ def register():
                                      role='user',
                                      dob=datetime.strptime(dob, "%Y-%m-%d").date(),
                                      hash_password=hashed_password,
+                                     profile_pic = 'default_user.png',
                                      is_active=False,
                                      verification_token=token,
                                      email_verified=False,
@@ -252,11 +209,13 @@ def verify_email(token):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if session.get("is_active"):
+    if session.get("user_id"):
         return redirect(url_for('homepage'))
     if request.method == 'POST':
         username = request.form['username'].strip()
         password = request.form['password'].strip()
+
+        user = User.query.filter_by(username=username).first()
 
         if not username and not password:
             flash("All fields are required!")
@@ -275,6 +234,8 @@ def login():
                    return redirect(url_for('login'))
 
                #saving user session
+
+               session['user_id'] = existing_user.user_id
                session['username'] = existing_user.username
                session['role'] = existing_user.role
                session['is_active'] = True
@@ -310,6 +271,7 @@ def admin_login():
             session['username'] = admin.username
             session['role'] = "admin"
             session['is_active'] = True
+            session['user_id'] = admin.user_id
             admin.is_active = True
             db.session.commit()
             flash(f"Welcome back Admin {session['username']}")
@@ -321,19 +283,45 @@ def admin_login():
 
     return render_template('admin_login.html')
 
+def award_points(user_id, points, reason):
+    new_entry = LoyaltyLedger(user_id=user_id, points=points, reason=reason)
+    db.session.add(new_entry)
+    db.session.commit()
+    total = db.session.query(func.sum(LoyaltyLedger.points)).filter_by(user_id=user_id).scalar() or 0
+    eligible_badges = Badge.query.filter(Badge.points_required <= total).all()
+    for b in eligible_badges:
+        exists = UserBadge.query.filter_by(user_id=user_id, badge_id=b.badge_id).first()
+        if not exists:
+            new_badge = UserBadge(user_id=user_id, badge_id=b.badge_id)
+            db.session.add(new_badge)
+        db.session.commit()
+
 
 @app.route('/homepage')
 def homepage():
-    if not session.get("is_active") or "username" not in session:
+
+    if not session.get("user_id"):
         flash("Please login first!", "danger")
         return redirect(url_for('login'))
 
+    user = User.query.get(session.get('user_id'))
 
-    user = User.query.filter_by(username=session['username']).first()
     if not user:
         session.clear()
         return redirect(url_for('login'))
-    if user.role != "admin" and user.username == "Preston":
+
+
+
+    total_points = db.session.query(func.sum(LoyaltyLedger.points)).filter_by(user_id=user.user_id).scalar() or 0
+    community_points = db.session.query(func.sum(LoyaltyLedger.points)).scalar() or 0
+    total_trees = Tree.query.count()
+
+
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+    if user.email == "quietgardenercollective@gmail.com":
+
         user.role = "admin"
         db.session.commit()
     print(f"DEBUG: user {user.username} has a role {user.role}")
@@ -369,11 +357,13 @@ def homepage():
         obs_count, wildlife_count, disease_count = 0, 0, 0
 
 
-    return render_template("homepage.html", username=user.username, role=user.role.lower() if user.role else 'user', adopted_count=adopted_count,
+    return render_template("homepage.html", user=user, username=user.username, role=user.role.lower() if user.role else 'user', adopted_count=adopted_count,
                            total_trees_in_db=total_trees_in_db,
                            obs_count=obs_count,
                            wildlife_count=wildlife_count,
-                           disease_count=disease_count)
+                           disease_count=disease_count,
+                           points=total_points,
+                           community_points=community_points)
 
 
 @app.route('/observation_details/<obs_type>')
@@ -381,7 +371,7 @@ def observation_details(obs_type):
     if not session.get("is_active"):
         return redirect(url_for('login'))
 
-    user = User.query.filter_by(username=session['username']).first()
+    user = User.query.get(session.get('user_id'))
 
     my_adoptions = Adoption.query.filter_by(user_id=user.user_id).all()
     my_tree_ids = [adopt.tree_id for adopt in my_adoptions]
@@ -512,6 +502,8 @@ def local_trees():
     if not session.get("is_active"):
         return redirect(url_for('login'))
 
+    user = User.query.get(session.get('user_id'))
+
 
 
     # request.args gets data from query string (? search = oak)
@@ -639,6 +631,7 @@ def local_trees():
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     trees_on_page = pagination.items
     return render_template('local_trees.html',
+                           user=user,
                            trees=trees_on_page, # use for cards
                            all_trees=all_trees,
                            pagination=pagination,
@@ -654,7 +647,14 @@ def local_trees():
 
 @app.route('/tree/<int:tree_id>')
 def tree_detail(tree_id):
+
     if not session.get("is_active"):
+        return redirect(url_for('login'))
+
+    user = User.query.get(session.get("user_id"))
+
+    if not user:
+        session.clear()
         return redirect(url_for('login'))
 
     tree_data = db.session.query(Tree, Species).join(Species).filter(Tree.tree_id == tree_id).first_or_404()
@@ -675,8 +675,107 @@ def tree_detail(tree_id):
         .filter(Observation.tree_id == tree_id)\
         .order_by(Observation.observed_time.desc()).all()
 
+    activity = []
+
+    for obs, user_obj, o_type in observations:
+        user_badge = (
+            db.session.query(Badge)
+            .join(UserBadge, Badge.badge_id == UserBadge.badge_id)
+            .filter(UserBadge.user_id == user_obj.user_id)
+            .order_by(Badge.points_required.desc())
+            .first()
+        )
+
+        if o_type.observation_category == "Disease":
+
+            health = tree.health_status  # current approach
+
+            if health == "Critical":
+                title = "Critical"
+                icon = "fa-flag"
+                pill_cls = "pill-critical"
+
+            elif health == "Needs Attention":
+                title = "Needs Attention"
+                icon = "fa-exclamation-triangle"
+                pill_cls = "pill-warning"
+
+            elif health == "Healthy":
+                title = "Healthy"
+                icon = "fa-leaf"
+                pill_cls = "pill-healthy"
+
+            else:
+                title = "Status Unknown"
+                icon = "fa-circle"
+                pill_cls = "pill-default"
+
+        else:
+            # Wildlife
+            title = "Wildlife Spotted"
+            icon = "fa-paw"
+            pill_cls = "pill-healthy"
+        user_badge = (
+            db.session.query(Badge)
+            .join(UserBadge, Badge.badge_id == UserBadge.badge_id)
+            .filter(UserBadge.user_id == user_obj.user_id)
+            .order_by(Badge.points_required.desc())
+            .first()
+        )
+
+        activity.append({
+            "title": title,
+            "icon": icon,
+            "pill_lbl": o_type.observation_category.lower(),
+            "pill_cls": pill_cls,
+            "dt": obs.observed_time,
+            "notes": obs.notes,
+            "user": user_obj,
+            "badge": user_badge
+        })
+
     obs_count = db.session.query(func.count(Observation.observation_id))\
                 .filter(Observation.tree_id == tree_id).scalar()
+
+    # Fetch all users who tagged this tree, most recent first
+    tagged_by = db.session.query(UserTreeTag, User) \
+        .join(User, UserTreeTag.user_id == User.user_id) \
+        .filter(UserTreeTag.tree_id == tree_id) \
+        .order_by(UserTreeTag.tagged_at.desc()).all()
+
+    tagged_with_badge = []
+
+    for tag_entry, tag_user in tagged_by:
+        print("DEBUG LOCATION: ", tag_entry.location_name)
+        user_badge = (
+            db.session.query(Badge)
+            .join(UserBadge, Badge.badge_id == UserBadge.badge_id)
+            .filter(UserBadge.user_id == tag_user.user_id)
+            .order_by(Badge.points_required.desc())
+            .first()
+        )
+        tagged_with_badge.append((tag_entry, tag_user, user_badge))
+
+
+
+    tagged_by = tagged_with_badge
+
+    current_badge = (
+        db.session.query(Badge)
+        .join(UserBadge, Badge.badge_id == UserBadge.badge_id)
+        .filter(UserBadge.user_id == user.user_id)
+        .order_by(Badge.points_required.desc())
+        .first()
+    )
+    if not current_badge:
+        current_badge = {
+            "name": "New Explorer",
+            "icon_class": "fa-seedling"
+        }
+
+
+
+
 
     return render_template('tree_detail.html',
                            tree=tree,
@@ -684,7 +783,12 @@ def tree_detail(tree_id):
                            adoption=adoption,
                            adopted_user=adopted_user,
                            observations=observations,
-                           obs_count=obs_count)
+                           obs_count=obs_count,
+                           tagged_by=tagged_by,
+                           user=user,
+                           current_badge=current_badge,
+                           now=datetime.now(uk_tz),
+                           activity=activity)
 
 
 @app.route('/adopt_tree/<int:tree_id>', methods=['POST'])
@@ -692,7 +796,7 @@ def adopt_tree(tree_id):
     if not session.get("is_active"):
         return redirect(url_for('login'))
 
-    user = User.query.filter_by(username=session['username']).first()
+    user = User.query.get(session.get('user_id'))
 
     existing =  Adoption.query.filter_by(tree_id=tree_id).first()
 
@@ -715,7 +819,7 @@ def adopt_tree(tree_id):
 @app.route('/add_observation/<int:tree_id>', methods=['POST'])
 def add_observation(tree_id):
     if not session.get("is_active"): return redirect(url_for('login'))
-    user = User.query.filter_by( username=session['username']).first()
+    user = User.query.get(session.get('user_id'))
     if not user:
         return redirect(url_for('login'))
 
@@ -726,7 +830,10 @@ def add_observation(tree_id):
     notes = request.form.get('notes', '').strip()
     import re
     tags_input = request.form.get('tags', '')
-    tags = re.findall(r"#(\w+)", tags_input.lower())
+    tags = re.findall(r"#\w+", tags_input.lower())
+
+    if tags:
+        notes = notes + " " + " ".join(tags)
 
 
 
@@ -765,15 +872,18 @@ def add_observation(tree_id):
         observation_type_id=obs_type_obj.observation_type_id,
         notes=notes,
         image_url=image_path,
+        health_status=health_update,
         observed_time=datetime.now()
 
     )
 
     for tag_name in tags:
-        tag = Tag.query.filter_by(name=tag_name).first()
+        clean_name = tag_name.replace('#', '')
+
+        tag = Tag.query.filter_by(name=clean_name).first()
 
         if not tag:
-            tag = Tag(name=tag_name)
+            tag = Tag(name=clean_name)
             db.session.add(tag)
             db.session.commit()
 
@@ -789,6 +899,19 @@ def add_observation(tree_id):
 
 
     db.session.add(new_obs)
+    starter_badge = Badge.query.filter_by(points_required=0).first()
+
+    existing = UserBadge.query.filter_by(user_id=user.user_id).first()
+
+    if not existing and starter_badge:
+        db.session.add(UserBadge(
+            user_id=user.user_id,
+            badge_id=starter_badge.badge_id
+        ))
+
+    award_points(user.user_id, 10, f"Observation on Tree #{tree_id}")
+
+
     db.session.commit()
     if image_path:
         tree = Tree.query.get(tree_id)
@@ -798,6 +921,82 @@ def add_observation(tree_id):
     flash("Observation added to the community feed!", "success")
     return redirect(url_for('tree_detail', tree_id=tree_id))
 
+@app.route('/profile')
+def profile():
+
+    if not session.get("is_active"):
+        return redirect(url_for('login'))
+    user = User.query.get(session.get('user_id'))
+    points = db.session.query(func.sum(LoyaltyLedger.points)).filter_by(user_id=user.user_id).scalar() or 0
+    current_badge = Badge.query\
+    .filter(Badge.points_required <= points)\
+    .order_by(Badge.points_required.desc())\
+    .first()
+    badges = db.session.query(Badge).join(UserBadge).filter(UserBadge.user_id == user.user_id).all()
+    activity = LoyaltyLedger.query.filter_by(user_id=user.user_id).order_by(LoyaltyLedger.ledger_id.desc()).limit(
+        5).all()
+    return render_template("profile.html", user=user, points=points, badges=badges, activity=activity, current_badge=current_badge)
+
+
+@app.route('/edit_profile', methods=['POST'])
+def edit_profile():
+
+    if not session.get("is_active"):
+        return redirect(url_for('login'))
+
+    user = User.query.get(session.get('user_id'))
+
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+
+    new_username   = request.form.get('username', '').strip()
+    new_first_name = request.form.get('first_name', '').strip()
+    new_last_name  = request.form.get('last_name', '').strip()
+    new_dob        = request.form.get('dob', '').strip()
+
+    # Check if new username is already taken by a DIFFERENT user
+    if new_username and new_username != user.username:
+        taken = User.query.filter(
+            User.username == new_username,
+            User.user_id != user.user_id
+        ).first()
+        if taken:
+            flash("That username is already taken. Please choose another.", "danger")
+            return redirect(url_for('profile'))
+
+    # Only update if fields aren't empty
+    if new_username:
+        user.username = new_username
+    if new_first_name:
+        user.first_name = new_first_name
+    if new_last_name:
+        user.last_name = new_last_name
+    if new_dob:
+        try:
+            user.dob = datetime.strptime(new_dob, '%Y-%m-%d').date()
+        except ValueError:
+            flash("Invalid date format.", "danger")
+            return redirect(url_for('profile'))
+
+    # Handle profile photo upload
+    photo = request.files.get('profile_pic')
+    if photo and photo.filename != '':
+        if not allowed_file(photo.filename):
+            flash("Only PNG, JPG, and JPEG files are allowed.", "danger")
+            return redirect(url_for('profile'))
+
+        filename = secure_filename(
+            f"user_{user.user_id}_{uuid.uuid4().hex}_{photo.filename}"
+        )
+        file_path = os.path.join(app.config['PROFILE_UPLOAD_FOLDER'], filename)
+        photo.save(file_path)
+        user.profile_pic = filename
+
+    db.session.commit()
+    session['username'] = user.username  # Keep session in sync with new username
+    flash("Profile updated successfully!", "success")
+    return redirect(url_for('profile'))
 
 @app.route('/edit_tree/<int:tree_id>', methods=['GET', 'POST'])
 def edit_tree(tree_id):
@@ -846,6 +1045,44 @@ def events():
         return redirect(url_for('login'))
 
     return render_template('events.html')
+
+@app.route('/tag_tree/<int:tree_id>', methods=['POST'])
+def tag_tree(tree_id):
+    if not session.get("is_active"):
+        return redirect(url_for('login'))
+
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        return redirect(url_for('login'))
+
+    notes = request.form.get('notes', '').strip()
+    location_name = request.form.get('location_name')
+
+    new_tag = UserTreeTag(
+        tree_id=tree_id,
+        user_id=user.user_id,
+        tagged_at=datetime.now(),
+        notes=notes if notes else None,
+        location_name=location_name if location_name else None   # optional: pass via form if you want
+    )
+    db.session.add(new_tag)
+
+    # Award points for tagging a tree
+    award_points(user.user_id, 5, f"Tagged Tree #{tree_id}")
+
+    starter_badge = Badge.query.filter_by(points_required=0).first()
+
+    existing = UserBadge.query.filter_by(user_id=user.user_id).first()
+
+    if not existing and starter_badge:
+        db.session.add(UserBadge(
+            user_id=user.user_id,
+            badge_id=starter_badge.badge_id
+        ))
+    db.session.commit()
+
+    flash("You tagged this tree!", "tag_success")
+    return redirect(url_for('tree_detail', tree_id=tree_id))
 
 @app.route('/export_trees')
 def export_trees():
@@ -1031,7 +1268,7 @@ def import_trees():
                     obs_type_exists = Observation_type.query.filter_by(observation_type_id=obs_type_id).first()
 
                     if obs_type_exists:
-                        user = User.query.filter_by(username=session.get('username')).first()
+                        user = User.query.get(session.get('user_id'))
 
                         duplicate_obs = Observation.query.filter_by(
                             tree_id=existing.tree_id,
@@ -1095,7 +1332,7 @@ def import_trees():
                     print(f"Row {row_num}: observation_type_id {obs_type_id} does not exist in DB — skipping observation")
                     errors.append(f"Row {row_num}: obs_type {obs_type_id} not found in database — observation skipped")
                 else:
-                    user = User.query.filter_by(username=session.get('username')).first()
+                    user = User.query.get(session.get('user_id'))
                     if user:
                         new_obs = Observation(
                             tree_id=new_tree.tree_id,
@@ -1166,15 +1403,81 @@ def import_trees():
     return redirect(url_for('local_trees'))
 @app.route('/logout')
 def logout():
-    username = session.get('username')
-    if username:
-        user = User.query.filter_by(username=username).first()
-        if user:
-            user.is_active = False
-            db.session.commit()
+
+    user = User.query.get(session.get('user_id'))
+    if user:
+        user.is_active = False
+        db.session.commit()
     session.clear()
 
     return redirect(url_for('home'))
 if __name__ == "__main__":
+
+
+    with app.app_context():
+        db.create_all()
+        if Badge.query.count() == 0:
+            badges = [
+                Badge(name="Getting Started", icon_class="fa-solid fa-seedling", points_required=0),
+                Badge(name="New Explorer", icon_class="fa-solid fa-tree", points_required=0),
+                Badge(name="Nature Ally", icon_class="fa-solid fa-leaf", points_required=100),
+                Badge(name="Tree Protector", icon_class="fa-solid fa-shield-halved", points_required=500),
+                Badge(name="Tree Guardian", icon_class="fa-solid fa-crown", points_required=1000)
+            ]
+            db.session.add_all(badges)
+            db.session.commit()
+        existing_admin = User.query.filter_by(email="quietgardenercollective@gmail.com").first()
+        if not existing_admin:
+            admin = User(first_name="Preston",
+                         last_name="De Sousa",
+                         username="Preston",
+                         email="quietgardenercollective@gmail.com",
+                         role="admin",
+                         dob=date(2004, 10, 4),
+                         hash_password=generate_password_hash("Preston123"),
+                         profile_pic='default_user.png',
+                         is_active=False,
+                         email_verified=True)
+            db.session.add(admin)
+            db.session.commit()
+            print("ADMIN CREATED !!")
+
+
+        if Species.query.count() == 0:
+            species_list = [
+                Species(species_name="Oak"),
+                Species(species_name="Maple"),
+                Species(species_name="Pine"),
+                Species(species_name="Birch"),
+                Species(species_name="Cherry")
+            ]
+            db.session.add_all(species_list)
+            db.session.commit()
+            print("All types of Species Added!")
+
+
+
+
+        if Observation_type.query.count() == 0:
+            obs_types = [
+                Observation_type(observation_category="Wildlife", observation_report="Wildlife Sighting"),
+                Observation_type(observation_category="Disease", observation_report="Health Alert / Disease"),
+            ]
+            db.session.add_all(obs_types)
+            db.session.commit()
+            print("Observation types seeded!")
+
+
+
+
+        else:
+            if existing_admin.role != "admin":
+                existing_admin.role = "admin"
+                db.session.commit()
+                print("------PRESTON ROLE UPDATED TO ADMIN")
+
+            else:
+                print("----------PRESTON IS ALREADY ADMIN")
+
     app.run(debug=True)
 

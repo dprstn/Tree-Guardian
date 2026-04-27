@@ -1,10 +1,15 @@
 from enum import unique
 
+import pytz
 from  flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
 
 db = SQLAlchemy()
+
+uk_tz = pytz.timezone('Europe/London')
+
+
 
 class User(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
@@ -15,6 +20,7 @@ class User(db.Model):
     role= db.Column(db.String(50), nullable=False)
     dob = db.Column(db.Date)
     hash_password = db.Column(db.String(255), nullable=False)
+    profile_pic = db.Column(db.String(255), default='default_user.png')
     is_active = db.Column(db.Boolean, default=False)
     email_verified = db.Column(db.Boolean, default=False)
     verification_token = db.Column(db.String(100), unique=True)
@@ -54,6 +60,7 @@ class Observation(db.Model):
     notes = db.Column(db.Text, nullable=False)
     image_url = db.Column(db.String(255), nullable=True)
     observed_time = db.Column(db.DateTime, default=datetime.now)
+    health_status = db.Column(db.String(50))
 
 
 class Adoption(db.Model):
@@ -92,15 +99,28 @@ class LoyaltyLedger(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)
     points = db.Column(db.Integer, nullable=False)
     reason = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(uk_tz))
 
 class Badge(db.Model):
     badge_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    icon_class = db.Column(db.String(100))
+    points_required = db.Column(db.Integer, default=0)
 
 class UserBadge(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), primary_key=True)
     badge_id = db.Column(db.Integer, db.ForeignKey('badge.badge_id'), primary_key=True)
     awarded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class UserTreeTag(db.Model):
+    __tablename__ = 'user_tree_tags'
+
+    tree_tag_id = db.Column(db.Integer, primary_key=True)
+    tree_id     = db.Column(db.Integer, db.ForeignKey('tree.tree_id'), nullable=False)
+    user_id     = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)
+    tagged_at   = db.Column(db.DateTime, default=lambda: datetime.now(uk_tz), nullable=False)
+    notes       = db.Column(db.String(120), nullable=True)
+    location_name = db.Column(db.String(200), nullable=True)
 
 
 
