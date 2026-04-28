@@ -536,8 +536,11 @@ function previewImg(input) {
     window.openEventMap = function () {
         modal.classList.add('open');
         document.body.style.overflow = 'hidden';
-        if (!_map) _initMap();
-        else setTimeout(() => _map.invalidateSize(), 60);
+        if (!_map) {
+            setTimeout(_initMap, 400);
+        } else {
+            setTimeout(() => _map.invalidateSize(), 300);
+        }
     };
 
     /* ── Close ── */
@@ -551,7 +554,7 @@ function previewImg(input) {
         if (e.target === modal) closeEventMap();
     });
 
-    /* ── Init Leaflet (same tiles + divIcon as local_trees.html) ── */
+    /* ── Init Leaflet ── */
     function _initMap() {
         const validTrees = (typeof TREE_DATA !== 'undefined')
             ? TREE_DATA.filter(t => t.lat != null && t.lng != null)
@@ -559,17 +562,15 @@ function previewImg(input) {
 
         const centre = validTrees.length
             ? [validTrees[0].lat, validTrees[0].lng]
-            :  [51.8993, -2.0782];
+            : [51.8993, -2.0782];
 
         _map = L.map('event-map', { center: centre, zoom: 15, scrollWheelZoom: true });
 
-        /* Same CARTO Voyager tile as local_trees.html */
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
             subdomains: 'abcd', maxZoom: 20
         }).addTo(_map);
 
-        /* Plot existing trees — same divIcon + health badge as local_trees.html */
         validTrees.forEach(function (tree) {
             let alertHtml = '';
             if (tree.health === 'Critical') {
@@ -584,15 +585,15 @@ function previewImg(input) {
                 iconSize: [36,36], iconAnchor: [18,18], popupAnchor: [0,-20]
             });
 
-            const hClass = tree.health === 'Healthy'         ? 'healthy'
-                         : tree.health === 'Needs Attention' ? 'needs'
-                         : 'critical';
-
             const healthIcon = tree.health === 'Healthy'
                 ? '<i class="fa fa-leaf"></i>'
                 : tree.health === 'Needs Attention'
                 ? '<i class="fa fa-triangle-exclamation"></i>'
                 : '<i class="fa fa-circle-xmark"></i>';
+
+            const hClass = tree.health === 'Healthy' ? 'healthy'
+                         : tree.health === 'Needs Attention' ? 'needs'
+                         : 'critical';
 
             const imgHtml = tree.image
                 ? `<img src="/static/${tree.image}" class="map-popup-img" alt="${tree.species}"
@@ -604,61 +605,43 @@ function previewImg(input) {
                             : 'Large';
 
             const popup = `
-            <div class="map-popup">
-                <div class="mp-img-wrap">${imgHtml}</div>
-                <div class="mp-body" style="padding:11px;">
-                    <!-- Green/Gold Observation Badge -->
-                    <div class="mp-obs-badge" style="background:#0b422a; color:#fbb034; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:800; display:inline-block; margin-bottom:8px;">
-                        <i class="fa fa-eye"></i> ${tree.obs} Observations
-                    </div>
-                    <div class="mp-header-row" style="display:flex; justify-content:space-between; align-items:center;">
-                        <div class="mp-title-col">
-                            <p class="mp-species">${tree.species}</p>
-                            <p class="mp-location"><i class="fa fa-location-dot"></i> ${tree.lat.toFixed(3)}, ${tree.lng.toFixed(3)}</p>
+                <div class="map-popup">
+                    <div class="mp-img-wrap">${imgHtml}</div>
+                    <div class="mp-body" style="padding:11px;">
+                        <div class="mp-obs-badge" style="background:#0b422a; color:#fbb034; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:800; display:inline-block; margin-bottom:8px;">
+                            <i class="fa fa-eye"></i> ${tree.obs} Observations
                         </div>
-                        <span class="mp-health-badge ${healthClass}">${healthIcon} ${tree.health}</span>
-                    </div>
-                    <div class="mp-body">
+                        <div class="mp-header-row" style="display:flex; justify-content:space-between; align-items:center;">
+                            <div class="mp-title-col">
+                                <p class="mp-species">${tree.species}</p>
+                                <p class="mp-location"><i class="fa fa-location-dot"></i> ${tree.lat.toFixed(3)}, ${tree.lng.toFixed(3)}</p>
+                            </div>
+                            <span class="mp-health-badge ${hClass}">${healthIcon} ${tree.health}</span>
+                        </div>
                         <div class="mp-stats">
                             <div class="mp-stat">
-                                <i class="fa fa-calendar-days"></i>
                                 <span class="mp-stat-val">${tree.age ?? '—'} yrs</span>
                                 <span class="mp-stat-lbl">Age</span>
                             </div>
                             <div class="mp-stat">
-                                <i class="fa fa-tree"></i>
                                 <span class="mp-stat-val">${sizeLabel}</span>
                                 <span class="mp-stat-lbl">Size</span>
                             </div>
                             <div class="mp-stat">
-                                <i class="fa fa-seedling"></i>
                                 <span class="mp-stat-val">${tree.planted ?? '—'}</span>
                                 <span class="mp-stat-lbl">Planted</span>
                             </div>
-                            <div class="mp-stat">
-                                <i class="fa fa-clock"></i>
-                                <span class="mp-stat-val">${lastSeenHtml}</span>
-                                <span class="mp-stat-lbl">Observed</span>
-                            </div>
                         </div>
-                        ${adoptedHtml}
-                        ${tagsHtml}
-                        ${qrHtml}
                         <a href="${tree.detail_url}" class="mp-btn">
                             View Details <i class="fa fa-chevron-right"></i>
                         </a>
                     </div>
                 </div>`;
 
-
             L.marker([tree.lat, tree.lng], { icon: treeIcon })
                 .addTo(_map)
                 .bindPopup(popup, { maxWidth: 270, minWidth: 270 });
         });
-
-        if (validTrees.length > 1) {
-            _map.fitBounds(validTrees.map(t => [t.lat, t.lng]), { padding:[40,40], maxZoom:17 });
-        }
 
         /* Red calendar pin for the event location */
         const eventIcon = L.divIcon({
@@ -700,6 +683,16 @@ function previewImg(input) {
             _map.setView([existLat, existLng], 15);
             doneBtn.disabled = false;
         }
+
+        /* ── invalidateSize AFTER everything is built ── */
+        setTimeout(() => {
+            _map.invalidateSize();
+            if (validTrees.length > 1) {
+                _map.fitBounds(validTrees.map(t => [t.lat, t.lng]), { padding: [40, 40], maxZoom: 17 });
+            } else if (validTrees.length === 1) {
+                _map.setView([validTrees[0].lat, validTrees[0].lng], 15);
+            }
+        }, 300);
     }
 
     /* ── Called every time pin is placed or dragged ── */
@@ -737,15 +730,11 @@ function previewImg(input) {
                 autofillTag.style.display = 'inline-block';
                 clearBtn.classList.add('show');
                 if (_marker) _marker.bindPopup(`
-                    <div style="font-family: inherit; padding: 2px 4px;">
-                        <div style="font-size: 0.7rem; font-weight: 700; color: #888; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px;">
-                            Event Location
-                        </div>
-                        <div style="font-size: 0.88rem; font-weight: 600; color: #1b5e20; line-height: 1.35;">
-                            ${friendly}
-                        </div>
+                    <div style="font-family:inherit; padding:2px 4px;">
+                        <div style="font-size:0.7rem; font-weight:700; color:#888; text-transform:uppercase; margin-bottom:3px;">Event Location</div>
+                        <div style="font-size:0.88rem; font-weight:600; color:#1b5e20;">${friendly}</div>
                     </div>
-            `).openPopup();
+                `).openPopup();
             }
         })
         .catch(function () { spinner.classList.remove('show'); });
