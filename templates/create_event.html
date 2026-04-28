@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Event</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <script>
+        const TREE_DATA = {{ tree_data  | tojson }};
+    </script>
+    <style>
+        .create-wrap {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 24px 16px 100px;
+        }
+        .create-card {
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 28px 24px;
+        }
+        .create-card h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #1b5e20;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .form-group { margin-bottom: 18px; }
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #444;
+            margin-bottom: 6px;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.92rem;
+            background: #f9f9f9;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus { border-color: #1b5e20; background: #fff; }
+        .form-group textarea { resize: vertical; min-height: 90px; }
+        .form-row { display: flex; gap: 14px; }
+        .form-row .form-group { flex: 1; }
+        .btn-submit {
+            width: 100%;
+            background: #1b5e20;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: background 0.2s;
+        }
+        .btn-submit:hover { background: #2e7d32; }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #1b5e20;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            margin-bottom: 16px;
+        }
+        .flash-msg { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9rem; font-weight: 500; }
+        .flash-success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+        .flash-danger  { background: #fdecea; color: #b71c1c; border: 1px solid #ef9a9a; }
+
+        /* image upload preview */
+        .img-preview {
+            width: 100%;
+            max-height: 180px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-top: 8px;
+            display: none;
+            border: 1.5px solid #ddd;
+        }
+         /* ── Map picker styles ── */
+        .event-loc-section { margin-bottom: 1.25rem; }
+
+        .btn-map-event {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            background: #1b5e20;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.55rem 1.2rem;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            margin-bottom: 0.8rem;
+            width: 100%;
+            justify-content: center;
+        }
+        .btn-map-event:hover  { background: #2e7d32; }
+        .btn-map-event:active { transform: scale(0.98); }
+
+        #event-map-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        #event-map-modal.open { display: flex; }
+
+        .event-modal-content {
+            background: #fff;
+            border-radius: 14px;
+            padding: 1.2rem;
+            width: min(95vw, 600px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.28);
+        }
+        .event-modal-content h3 {
+            margin: 0 0 0.75rem 0;
+            color: #1b5e20;
+            font-size: 1.05rem;
+        }
+        #event-map {
+            height: 340px;
+            width: 100%;
+            border-radius: 10px;
+            border: 2px solid #1b5e20;
+            margin-bottom: 0.8rem;
+        }
+        .event-map-hint {
+            font-size: 0.8rem;
+            color: #555;
+            margin-bottom: 0.6rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        #event-geocode-spinner {
+            display: none;
+            align-items: center;
+            gap: 0.35rem;
+            color: #1b5e20;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+        #event-geocode-spinner.show { display: flex; }
+        .edot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: #1b5e20;
+            animation: edotBounce 0.9s infinite ease-in-out;
+        }
+        .edot:nth-child(2) { animation-delay: 0.15s; }
+        .edot:nth-child(3) { animation-delay: 0.30s; }
+        @keyframes edotBounce {
+            0%,80%,100% { transform:scale(0.55); opacity:0.4; }
+            40%         { transform:scale(1);    opacity:1;   }
+        }
+        .event-loc-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #444;
+            margin-bottom: 6px;
+        }
+        .autofill-tag {
+            font-size: 0.68rem;
+            background: #d4edda;
+            color: #155724;
+            border-radius: 10px;
+            padding: 1px 8px;
+            font-weight: 500;
+            display: none;
+        }
+        .event-loc-input {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.92rem;
+            box-sizing: border-box;
+            background: #f9f9f9;
+            transition: border-color 0.2s;
+            margin-bottom: 14px;
+            font-family: inherit;
+        }
+        .event-loc-input:focus {
+            outline: none;
+            border-color: #1b5e20;
+            background: #fff;
+        }
+        .event-loc-input.autofilled {
+            border-color: #28a745;
+            background: #f8fff9;
+        }
+        .event-coord-row { display: flex; gap: 14px; margin-bottom: 6px; }
+        .event-coord-col { flex: 1; }
+        .event-coord-col label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #444;
+            margin-bottom: 6px;
+        }
+        .event-coord-input {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.92rem;
+            box-sizing: border-box;
+            background: #f9f9f9;
+            font-family: inherit;
+        }
+        .event-coord-input.autofilled {
+            border-color: #28a745;
+            background: #f2fff4;
+        }
+        #eventClearLoc {
+            display: none;
+            margin-top: 0.5rem;
+            background: none;
+            border: 1.5px solid #dc3545;
+            color: #dc3545;
+            border-radius: 6px;
+            padding: 3px 12px;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        #eventClearLoc:hover { background: #dc3545; color: #fff; }
+        #eventClearLoc.show  { display: inline-block; }
+
+        /* Nearby trees preview panel */
+        #eventNearbyPreview {
+            display: none;
+            margin-top: 0.9rem;
+            border: 1.5px solid #1b5e20;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #eventNearbyPreview.show { display: block; }
+        .enp-header {
+            background: #1b5e20;
+            color: #fbb034;
+            font-size: 0.82rem;
+            font-weight: 700;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .enp-list {
+            padding: 8px 12px;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+        .enp-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 4px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.82rem;
+            color: #333;
+        }
+        .enp-item:last-child { border-bottom: none; }
+        .enp-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+        .enp-dot.healthy  { background: #28a745; }
+        .enp-dot.needs    { background: #fd7e14; }
+        .enp-dot.critical { background: #dc3545; }
+        .enp-dist { margin-left: auto; color: #888; font-size: 0.75rem; }
+        .enp-empty { font-size:0.82rem; color:#888; padding:8px 0; text-align:center; }
+
+        /* Done button inside modal */
+        .btn-map-done {
+            width: 100%;
+            background: #1b5e20;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 0.6rem;
+            transition: background 0.2s;
+        }
+        .btn-map-done:hover    { background: #2e7d32; }
+        .btn-map-done:disabled { background: #aaa; cursor: not-allowed; }
+    </style>
+</head>
+<body class="explore-body">
+
+<nav class="mobile-nav">
+    <div style="flex: 1;"></div>
+    <div class="nav-center">
+        <a href="{{ url_for('homepage') }}" class="nav-item">
+            <i class="fa-solid fa-house"></i> Home
+        </a>
+        <a href="{{ url_for('local_trees') }}" class="nav-item">
+            <i class="fa-solid fa-tree"></i> Local Trees
+        </a>
+        <a href="{{ url_for('events') }}" class="nav-item active">
+            <i class="fa-solid fa-bullhorn"></i> Events
+        </a>
+    </div>
+    <div class="nav-right-profile">
+        <div class="profile-dropdown">
+            <div class="profile-trigger orange-theme">
+                {% if current_user.profile_pic and current_user.profile_pic != 'default_user.png' %}
+                    <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_pic) }}"
+                         class="nav-avatar">
+                {% else %}
+                    <i class="fa-solid fa-user"></i>
+                {% endif %}
+                <span class="user-name-text">{{ current_user.username }}</span>
+                <i class="fa fa-chevron-down"></i>
+            </div>
+            <div class="dropdown-content">
+                <a href="{{ url_for('profile') }}"><i class="fa-solid fa-circle-user"></i> Profile</a>
+                <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="create-wrap">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash-msg flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <a href="{{ url_for('events') }}" class="back-link">
+        <i class="fa-solid fa-arrow-left"></i> Back to Events
+    </a>
+
+    <div class="create-card">
+        <h2><i class="fa-solid fa-calendar-plus"></i> Create Event</h2>
+
+        <form method="POST" enctype="multipart/form-data">
+
+            <div class="form-group">
+                <label>Event Title *</label>
+                <input type="text" name="title" placeholder="e.g. Watering the Plants" required>
+            </div>
+
+            <div class="form-group">
+                <label>Short Description</label>
+                <textarea name="description" placeholder="Brief description shown on the events list…"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>About (detail page)</label>
+                <textarea name="about" placeholder="Full details, what to bring, etc…" style="min-height:120px;"></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Start Date & Time *</label>
+                    <input type="datetime-local" name="event_date" required>
+                </div>
+                <div class="form-group">
+                    <label>End Date & Time</label>
+                    <input type="datetime-local" name="end_date">
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════════
+                 LOCATION SECTION — replaces the old 3 plain fields
+            ═══════════════════════════════════════════════════════ -->
+            <div class="event-loc-section">
+
+                <!-- Pick on Map button -->
+                <button type="button" class="btn-map-event" onclick="openEventMap()">
+                    <i class="fa-solid fa-location-dot"></i> Pick on Map
+                </button>
+
+                <!-- Location name (auto-filled, still editable) -->
+                <div class="event-loc-label">
+                    Location Name
+                    <span class="autofill-tag" id="eventAutofillTag">auto-filled ✓</span>
+                </div>
+
+                <div id="event-geocode-spinner">
+                    <div class="edot"></div><div class="edot"></div><div class="edot"></div>
+                    <span>Looking up location…</span>
+                </div>
+
+                <input type="text"
+                       id="event_location_name"
+                       name="location_name"
+                       class="event-loc-input"
+                       placeholder="e.g. Naunton Park, Charlton Kings"
+                       autocomplete="off">
+
+                <!-- Lat / Lng -->
+                <div class="event-coord-row">
+                    <div class="event-coord-col">
+                        <label for="event_latitude">Latitude (optional)</label>
+                        <input type="text"
+                               id="event_latitude"
+                               name="latitude"
+                               class="event-coord-input"
+                               placeholder="51.8985">
+                    </div>
+                    <div class="event-coord-col">
+                        <label for="event_longitude">Longitude (optional)</label>
+                        <input type="text"
+                               id="event_longitude"
+                               name="longitude"
+                               class="event-coord-input"
+                               placeholder="-2.0634">
+                    </div>
+                </div>
+
+                <!-- Clear button -->
+                <button type="button" id="eventClearLoc" onclick="clearEventLocation()">
+                    ✕ Clear location
+                </button>
+
+                <!-- Nearby trees preview -->
+                <div id="eventNearbyPreview">
+                    <div class="enp-header">
+                        <i class="fa-solid fa-tree"></i>
+                        <span id="enpCount">0</span> trees within 1 km of this event
+                    </div>
+                    <div class="enp-list" id="enpList"></div>
+                </div>
+
+            </div>
+            <!-- ══════════════════════════════════════════════════
+                 END LOCATION SECTION
+            ═══════════════════════════════════════════════════════ -->
+
+            <div class="form-group">
+                <label>Event Cover Image</label>
+                <input type="file" name="event_image" accept=".png,.jpg,.jpeg"
+                       onchange="previewImg(this)">
+                <img id="img-preview" class="img-preview" src="" alt="Preview">
+            </div>
+
+            <button type="submit" class="btn-submit">
+                <i class="fa-solid fa-calendar-check"></i> Create Event
+            </button>
+        </form>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════
+     MAP MODAL
+═══════════════════════════════════════════════════════ -->
+<div id="event-map-modal">
+    <div class="event-modal-content">
+        <h3><i class="fa-solid fa-location-dot"></i> Select Event Location</h3>
+        <p class="event-map-hint">
+            <i class="fa-solid fa-circle-info"></i>
+            Click anywhere on the map to place a pin. Existing trees are shown so you can see what falls nearby.
+        </p>
+        <div id="event-map"></div>
+        <button type="button"
+                id="eventMapDoneBtn"
+                class="btn-map-done"
+                disabled
+                onclick="closeEventMap()">
+            <i class="fa-solid fa-check"></i> Done
+        </button>
+    </div>
+</div>
+
+
+<!-- Leaflet JS — load before our script -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+/* ── Image preview (unchanged from your original) ── */
+function previewImg(input) {
+    const preview = document.getElementById('img-preview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+/* ══════════════════════════════════════════════════
+   MAP PICKER — self-contained, no overlap with add_tree
+═══════════════════════════════════════════════════════ */
+(function () {
+    const modal       = document.getElementById('event-map-modal');
+    const doneBtn     = document.getElementById('eventMapDoneBtn');
+    const locInput    = document.getElementById('event_location_name');
+    const latInput    = document.getElementById('event_latitude');
+    const lngInput    = document.getElementById('event_longitude');
+    const spinner     = document.getElementById('event-geocode-spinner');
+    const autofillTag = document.getElementById('eventAutofillTag');
+    const clearBtn    = document.getElementById('eventClearLoc');
+    const nearbyPanel = document.getElementById('eventNearbyPreview');
+    const enpCount    = document.getElementById('enpCount');
+    const enpList     = document.getElementById('enpList');
+
+    let _map    = null;
+    let _marker = null;
+
+    /* ── Open ── */
+    window.openEventMap = function () {
+        modal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        if (!_map) _initMap();
+        else setTimeout(() => _map.invalidateSize(), 60);
+    };
+
+    /* ── Close ── */
+    window.closeEventMap = function () {
+        modal.classList.remove('open');
+        document.body.style.overflow = '';
+    };
+
+    /* Close on backdrop click */
+    modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeEventMap();
+    });
+
+    /* ── Init Leaflet (same tiles + divIcon as local_trees.html) ── */
+    function _initMap() {
+        const validTrees = (typeof TREE_DATA !== 'undefined')
+            ? TREE_DATA.filter(t => t.lat != null && t.lng != null)
+            : [];
+
+        const centre = validTrees.length
+            ? [validTrees[0].lat, validTrees[0].lng]
+            :  [51.8993, -2.0782];
+
+        _map = L.map('event-map', { center: centre, zoom: 15, scrollWheelZoom: true });
+
+        /* Same CARTO Voyager tile as local_trees.html */
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+            subdomains: 'abcd', maxZoom: 20
+        }).addTo(_map);
+
+        /* Plot existing trees — same divIcon + health badge as local_trees.html */
+        validTrees.forEach(function (tree) {
+            let alertHtml = '';
+            if (tree.health === 'Critical') {
+                alertHtml = '<div class="map-marker-alert red"><i class="fa-solid fa-flag"></i></div>';
+            } else if (tree.health === 'Needs Attention') {
+                alertHtml = '<div class="map-marker-alert amber"><i class="fa-solid fa-triangle-exclamation"></i></div>';
+            }
+
+            const treeIcon = L.divIcon({
+                className: '',
+                html: `<div class="map-tree-circle"><i class="fa fa-tree"></i>${alertHtml}</div>`,
+                iconSize: [36,36], iconAnchor: [18,18], popupAnchor: [0,-20]
+            });
+
+            const hClass = tree.health === 'Healthy'         ? 'healthy'
+                         : tree.health === 'Needs Attention' ? 'needs'
+                         : 'critical';
+
+            const healthIcon = tree.health === 'Healthy'
+                ? '<i class="fa fa-leaf"></i>'
+                : tree.health === 'Needs Attention'
+                ? '<i class="fa fa-triangle-exclamation"></i>'
+                : '<i class="fa fa-circle-xmark"></i>';
+
+            const imgHtml = tree.image
+                ? `<img src="/static/${tree.image}" class="map-popup-img" alt="${tree.species}"
+                        onerror="this.outerHTML='<div class=map-popup-img-placeholder><i class=fa fa-tree></i></div>'">`
+                : `<div class="map-popup-img-placeholder"><i class="fa fa-tree"></i></div>`;
+
+            const sizeLabel = tree.size <= 5  ? 'Small'
+                            : tree.size <= 15 ? 'Medium'
+                            : 'Large';
+
+            const popup = `
+            <div class="map-popup">
+                <div class="mp-img-wrap">${imgHtml}</div>
+                <div class="mp-body" style="padding:11px;">
+                    <!-- Green/Gold Observation Badge -->
+                    <div class="mp-obs-badge" style="background:#0b422a; color:#fbb034; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:800; display:inline-block; margin-bottom:8px;">
+                        <i class="fa fa-eye"></i> ${tree.obs} Observations
+                    </div>
+                    <div class="mp-header-row" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="mp-title-col">
+                            <p class="mp-species">${tree.species}</p>
+                            <p class="mp-location"><i class="fa fa-location-dot"></i> ${tree.lat.toFixed(3)}, ${tree.lng.toFixed(3)}</p>
+                        </div>
+                        <span class="mp-health-badge ${healthClass}">${healthIcon} ${tree.health}</span>
+                    </div>
+                    <div class="mp-body">
+                        <div class="mp-stats">
+                            <div class="mp-stat">
+                                <i class="fa fa-calendar-days"></i>
+                                <span class="mp-stat-val">${tree.age ?? '—'} yrs</span>
+                                <span class="mp-stat-lbl">Age</span>
+                            </div>
+                            <div class="mp-stat">
+                                <i class="fa fa-tree"></i>
+                                <span class="mp-stat-val">${sizeLabel}</span>
+                                <span class="mp-stat-lbl">Size</span>
+                            </div>
+                            <div class="mp-stat">
+                                <i class="fa fa-seedling"></i>
+                                <span class="mp-stat-val">${tree.planted ?? '—'}</span>
+                                <span class="mp-stat-lbl">Planted</span>
+                            </div>
+                            <div class="mp-stat">
+                                <i class="fa fa-clock"></i>
+                                <span class="mp-stat-val">${lastSeenHtml}</span>
+                                <span class="mp-stat-lbl">Observed</span>
+                            </div>
+                        </div>
+                        ${adoptedHtml}
+                        ${tagsHtml}
+                        ${qrHtml}
+                        <a href="${tree.detail_url}" class="mp-btn">
+                            View Details <i class="fa fa-chevron-right"></i>
+                        </a>
+                    </div>
+                </div>`;
+
+
+            L.marker([tree.lat, tree.lng], { icon: treeIcon })
+                .addTo(_map)
+                .bindPopup(popup, { maxWidth: 270, minWidth: 270 });
+        });
+
+        if (validTrees.length > 1) {
+            _map.fitBounds(validTrees.map(t => [t.lat, t.lng]), { padding:[40,40], maxZoom:17 });
+        }
+
+        /* Red calendar pin for the event location */
+        const eventIcon = L.divIcon({
+            className: '',
+            html: `<div style="width:36px;height:36px;background:#dc3545;border-radius:50% 50% 50% 0;
+                        transform:rotate(-45deg);border:3px solid #fff;
+                        box-shadow:0 2px 8px rgba(0,0,0,0.35);
+                        display:flex;align-items:center;justify-content:center;">
+                     <i class="fa-solid fa-calendar-days"
+                        style="color:#fff;font-size:13px;transform:rotate(45deg);"></i>
+                   </div>`,
+            iconSize:[36,36], iconAnchor:[18,36], popupAnchor:[0,-38]
+        });
+
+        /* Click map → place / move pin */
+        _map.on('click', function (e) {
+            const { lat, lng } = e.latlng;
+            if (_marker) {
+                _marker.setLatLng([lat, lng]);
+            } else {
+                _marker = L.marker([lat, lng], { icon: eventIcon, draggable: true, zIndexOffset: 1000 }).addTo(_map);
+                _marker.on('dragend', function () {
+                    const pos = _marker.getLatLng();
+                    _onPinMoved(pos.lat, pos.lng);
+                });
+            }
+            _onPinMoved(lat, lng);
+        });
+
+        /* Restore pin if editing an existing event */
+        const existLat = parseFloat(latInput.value);
+        const existLng = parseFloat(lngInput.value);
+        if (!isNaN(existLat) && !isNaN(existLng)) {
+            _marker = L.marker([existLat, existLng], { icon: eventIcon, draggable: true, zIndexOffset: 1000 }).addTo(_map);
+            _marker.on('dragend', function () {
+                const pos = _marker.getLatLng();
+                _onPinMoved(pos.lat, pos.lng);
+            });
+            _map.setView([existLat, existLng], 15);
+            doneBtn.disabled = false;
+        }
+    }
+
+    /* ── Called every time pin is placed or dragged ── */
+    function _onPinMoved(lat, lng) {
+        latInput.value = lat.toFixed(6);
+        lngInput.value = lng.toFixed(6);
+        latInput.classList.add('autofilled');
+        lngInput.classList.add('autofilled');
+        doneBtn.disabled = false;
+        _reverseGeocode(lat, lng);
+        _updateNearbyPreview(lat, lng);
+    }
+
+    /* ── Nominatim reverse geocoding ── */
+    function _reverseGeocode(lat, lng) {
+        spinner.classList.add('show');
+        autofillTag.style.display = 'none';
+        fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en' } }
+        )
+        .then(r => r.json())
+        .then(function (data) {
+            spinner.classList.remove('show');
+            if (data && data.display_name) {
+                const a = data.address || {};
+                const friendly = [
+                    a.leisure, a.park, a.amenity, a.road,
+                    a.neighbourhood, a.suburb,
+                    a.town || a.city || a.village, a.county
+                ].filter(Boolean).slice(0, 3).join(', ') || data.display_name;
+
+                locInput.value = friendly;
+                locInput.classList.add('autofilled');
+                autofillTag.style.display = 'inline-block';
+                clearBtn.classList.add('show');
+                if (_marker) _marker.bindPopup(`
+                    <div style="font-family: inherit; padding: 2px 4px;">
+                        <div style="font-size: 0.7rem; font-weight: 700; color: #888; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px;">
+                            Event Location
+                        </div>
+                        <div style="font-size: 0.88rem; font-weight: 600; color: #1b5e20; line-height: 1.35;">
+                            ${friendly}
+                        </div>
+                    </div>
+            `).openPopup();
+            }
+        })
+        .catch(function () { spinner.classList.remove('show'); });
+    }
+
+    /* ── Nearby trees preview (Haversine) ── */
+    function _updateNearbyPreview(eventLat, eventLng) {
+        if (typeof TREE_DATA === 'undefined') return;
+        const nearby = TREE_DATA
+            .filter(t => t.lat != null && t.lng != null)
+            .map(t => ({ tree: t, dist: _haversine(eventLat, eventLng, t.lat, t.lng) }))
+            .filter(x => x.dist <= 1.0)
+            .sort((a, b) => a.dist - b.dist);
+
+        enpCount.textContent = nearby.length;
+        nearbyPanel.classList.add('show');
+
+        enpList.innerHTML = nearby.length === 0
+            ? '<div class="enp-empty">No trees recorded within 1 km</div>'
+            : nearby.map(function (x) {
+                const hClass = x.tree.health === 'Healthy' ? 'healthy'
+                             : x.tree.health === 'Needs Attention' ? 'needs' : 'critical';
+                return `<div class="enp-item">
+                            <div class="enp-dot ${hClass}"></div>
+                            <span>${x.tree.species} <small style="color:#888;">#${x.tree.id}</small></span>
+                            <span class="enp-dist">${(x.dist * 1000).toFixed(0)} m</span>
+                        </div>`;
+            }).join('');
+    }
+
+    /* ── Haversine ── */
+    function _haversine(lat1, lon1, lat2, lon2) {
+        const R  = 6371;
+        const p1 = lat1 * Math.PI / 180, p2 = lat2 * Math.PI / 180;
+        const dp = (lat2 - lat1) * Math.PI / 180;
+        const dl = (lon2 - lon1) * Math.PI / 180;
+        const a  = Math.sin(dp/2)**2 + Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    /* ── Clear ── */
+    window.clearEventLocation = function () {
+        locInput.value = ''; latInput.value = ''; lngInput.value = '';
+        locInput.classList.remove('autofilled');
+        latInput.classList.remove('autofilled');
+        lngInput.classList.remove('autofilled');
+        autofillTag.style.display = 'none';
+        clearBtn.classList.remove('show');
+        nearbyPanel.classList.remove('show');
+        if (_marker && _map) { _map.removeLayer(_marker); _marker = null; }
+        doneBtn.disabled = true;
+    };
+
+})();
+</script>
+
+</body>
+</html>

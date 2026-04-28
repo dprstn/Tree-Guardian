@@ -3760,3 +3760,55 @@ body {
     color: #0b422a;     /* dark green */
     font-weight: 600;
 }
+.detail-upcoming-badge {
+    background: #e6f4ec;
+    color: #0b6e3a;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.badge-role {
+    background: #dff3e8;
+    color: #0b6e3a;
+    border: 1px solid #b7e4c7;
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.btn-adopt {
+    background: #0b422a;
+    color: #fbb034;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-adopt:hover {
+    background: #145c3a;
+}
+.adoption-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.adoption-actions form {
+    margin: 0;
+}
+
+.btn-adopt,
+.btn-view {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}

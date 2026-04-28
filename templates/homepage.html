@@ -23,7 +23,7 @@
                 <i class="fa-solid fa-tree"></i> Local Trees
             </a>
             <a href="{{ url_for('events') }}" class="nav-item">
-              <i class="nav-icon-img"></i> Events
+              <i class="fa-solid fa-bullhorn"></i> Events
 
             </a>
             {% if role.lower() == 'admin' %}
@@ -72,7 +72,9 @@
             <a href="#" class="c-button gold-variation">ADOPTED TREES • {{ adopted_count }}</a>
             <a href="#" class="c-button gold-variation">ADD OBSERVATION</a>
             <div class="center-single-button">
-                <a href="#" class="c-button gold-variation">ADOPT A TREE</a>
+                <a href="{{ url_for('local_trees', mode='adopt') }}" class="c-button gold-variation">
+                        ADOPT A TREE
+                </a>
             </div>
         </div>
 

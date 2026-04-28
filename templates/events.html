@@ -2,35 +2,468 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Events</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Events</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        /* ── Events page overrides ── */
+        .events-page-wrap {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px 16px 100px;
+        }
+
+        /* ── Page header ── */
+        .events-page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .events-page-header h1 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.6rem;
+            color: #1b5e20;
+            font-weight: 700;
+        }
+        .events-page-header h1 i {
+            font-size: 1.4rem;
+            color: #1b5e20;
+        }
+        .btn-create-event {
+            background: #1b5e20;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        .btn-create-event:hover { background: #2e7d32; }
+
+        /* ── Tabs ── */
+        .events-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+        .events-tab {
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            text-decoration: none;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .events-tab.active {
+            color: #1b5e20;
+            border-bottom-color: #1b5e20;
+        }
+
+        /* ── Search bar ── */
+        .search-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 22px;
+            align-items: center;
+        }
+        .search-wrap {
+            flex: 1;
+            position: relative;
+        }
+        .search-wrap i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 1rem;
+        }
+        .search-wrap input {
+            width: 100%;
+            padding: 11px 14px 11px 40px;
+            border: 1.5px solid #ddd;
+            border-radius: 50px;
+            font-size: 0.95rem;
+            background: #f9f9f9;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-wrap input:focus { border-color: #1b5e20; background: #fff; }
+        .btn-filter {
+            background: #f1f1f1;
+            border: 1.5px solid #ddd;
+            border-radius: 8px;
+            padding: 10px 14px;
+            cursor: pointer;
+            color: #555;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+        .btn-filter:hover { background: #e8f5e9; border-color: #1b5e20; color: #1b5e20; }
+
+        /* ── Event card ── */
+        .event-card {
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .event-card-top {
+            display: flex;
+            gap: 0;
+        }
+        .event-card-img {
+            width: 140px;
+            min-height: 140px;
+            flex-shrink: 0;
+            object-fit: cover;
+            background: #c8e6c9;
+        }
+        .event-card-img-placeholder {
+            width: 140px;
+            min-height: 140px;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #a5d6a7 0%, #c8e6c9 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: #2e7d32;
+            position: relative;
+        }
+        .event-status-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: #1b5e20;
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            padding: 3px 8px;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+        .event-card-body {
+            flex: 1;
+            padding: 14px 16px 10px;
+        }
+        .event-card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+        .event-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+        .event-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.83rem;
+            color: #555;
+        }
+        .event-meta-row i {
+            color: #888;
+            width: 14px;
+            text-align: center;
+        }
+        .event-avatars {
+            display: flex;
+            align-items: center;
+            gap: 0;
+        }
+        .event-avatar-img {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #fff;
+            margin-left: -6px;
+            background: #c8e6c9;
+        }
+        .event-avatar-img:first-child { margin-left: 0; }
+        .event-going-count {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #333;
+            margin-left: 8px;
+        }
+        .event-going-label { color: #666; font-weight: 400; }
+
+        /* ── Card description strip ── */
+        .event-card-desc {
+            border-top: 1px solid #f0f0f0;
+            padding: 10px 16px 6px;
+            font-size: 0.85rem;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        /* ── Card footer ── */
+        .event-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px 14px;
+            border-top: 1px solid #f0f0f0;
+            gap: 10px;
+        }
+        .event-stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+            color: #555;
+        }
+        .event-stat i { color: #888; }
+        .event-stat-num { font-weight: 700; color: #222; }
+        .btn-view-detail {
+            color: #1b5e20;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.2s;
+        }
+        .btn-view-detail:hover { color: #2e7d32; }
+
+        /* ── Empty state ── */
+        .events-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .events-empty i {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 14px;
+            color: #c8e6c9;
+        }
+        .events-empty p { font-size: 1rem; }
+
+        /* ── Flash messages ── */
+        .flash-msg {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .flash-success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+        .flash-danger  { background: #fdecea; color: #b71c1c; border: 1px solid #ef9a9a; }
+    </style>
 </head>
 <body class="explore-body">
 
+
+
 <nav class="mobile-nav">
+    <div style="flex: 1;"></div>
     <div class="nav-center">
         <a href="{{ url_for('homepage') }}" class="nav-item">
             <i class="fa-solid fa-house"></i> Home
         </a>
-
         <a href="{{ url_for('local_trees') }}" class="nav-item">
             <i class="fa-solid fa-tree"></i> Local Trees
         </a>
-
         <a href="{{ url_for('events') }}" class="nav-item active">
-            <img src="{{ url_for('static', filename='icons/megaphone.png') }}" class="nav-icon-img">
-            Events
+            <i class="fa-solid fa-bullhorn"></i> Events
         </a>
+    </div>
+    <div class="nav-right-profile">
+        <div class="profile-dropdown">
+            <div class="profile-trigger orange-theme">
+                {% if current_user.profile_pic and current_user.profile_pic != 'default_user.png' %}
+                    <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_pic) }}"
+                         class="nav-avatar">
+                {% else %}
+                    <i class="fa-solid fa-user"></i>
+                {% endif %}
+                <span class="user-name-text">{{ current_user.username }}</span>
+                <i class="fa fa-chevron-down"></i>
+            </div>
+            <div class="dropdown-content">
+                <a href="{{ url_for('profile') }}"><i class="fa-solid fa-circle-user"></i> Profile</a>
+                <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+            </div>
+        </div>
     </div>
 </nav>
 
-<div class="explorer-container">
-    <h1 class="explore-header">Events</h1>
+<div class="events-page-wrap">
 
-    <p style="text-align:center; margin-top:40px;">
-        No events yet.
-    </p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash-msg flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- ── Header ── -->
+    <div class="events-page-header">
+        <h1>
+            <i class="fa-solid fa-calendar-days"></i>
+            Tree Events
+        </h1>
+        {% if current_user and current_user.role == 'admin' %}
+        <a href="{{ url_for('create_event') }}" class="btn-create-event">
+            <i class="fa-solid fa-plus"></i> Create Event
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- ── Tabs ── -->
+    <div class="events-tabs">
+        <a href="{{ url_for('events', tab='upcoming', search=search) }}"
+           class="events-tab {% if tab == 'upcoming' %}active{% endif %}">
+            Upcoming Events
+        </a>
+        <a href="{{ url_for('events', tab='joined', search=search) }}"
+           class="events-tab {% if tab == 'joined' %}active{% endif %}">
+            My Joined Events
+        </a>
+    </div>
+
+    <!-- ── Search ── -->
+    <form method="GET" action="{{ url_for('events') }}" class="search-row">
+        <input type="hidden" name="tab" value="{{ tab }}">
+        <div class="search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" name="search" placeholder="Search events…" value="{{ search }}">
+        </div>
+        <button type="submit" class="btn-filter" title="Search">
+            <i class="fa-solid fa-sliders"></i>
+        </button>
+    </form>
+
+    <!-- ── Event Cards ── -->
+    {% if events %}
+        {% for event in events %}
+        <div class="event-card">
+            <div class="event-card-top">
+
+                <!-- Image or placeholder -->
+                {% if event.image_url %}
+                <div style="position:relative; width:140px; min-height:140px; flex-shrink:0;">
+                    <span class="event-status-badge">UPCOMING</span>
+                    <img src="{{ url_for('static', filename=event.image_url) }}"
+                         class="event-card-img" alt="{{ event.title }}"
+                         onerror="this.parentElement.innerHTML='<div class=\'event-card-img-placeholder\'><span class=\'event-status-badge\'>UPCOMING</span><i class=\'fa-solid fa-seedling\'></i></div>';">
+                </div>
+                {% else %}
+                <div class="event-card-img-placeholder">
+                    <span class="event-status-badge">UPCOMING</span>
+                    <i class="fa-solid fa-seedling"></i>
+                </div>
+                {% endif %}
+
+                <!-- Info -->
+                <div class="event-card-body">
+                    <div class="event-card-title">{{ event.title }}</div>
+                    <div class="event-meta">
+                        <div class="event-meta-row">
+                            <i class="fa-regular fa-calendar"></i>
+                            {{ event.event_date.strftime('%d %b %Y (%a)') }}
+                        </div>
+                        {% if event.end_date %}
+                        <div class="event-meta-row">
+                            <i class="fa-regular fa-clock"></i>
+                            {{ event.event_date.strftime('%I:%M %p') }} – {{ event.end_date.strftime('%I:%M %p') }}
+                        </div>
+                        {% else %}
+                        <div class="event-meta-row">
+                            <i class="fa-regular fa-clock"></i>
+                            {{ event.event_date.strftime('%I:%M %p') }}
+                        </div>
+                        {% endif %}
+                        {% if event.location_name %}
+                        <div class="event-meta-row">
+                            <i class="fa-solid fa-location-dot"></i>
+                            {{ event.location_name }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Avatars + going count -->
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <div class="event-avatars">
+                            {% set going_list = event.attendees.filter_by(status='going').limit(4).all() %}
+                            {% for att in going_list %}
+                            <img src="{{ url_for('static', filename='uploads/profiles/' + att.user.profile_pic) }}"
+                                 onerror="this.src='{{ url_for('static', filename='uploads/profiles/default_user.png') }}';"
+                                 class="event-avatar-img" title="{{ att.user.username }}">
+                            {% endfor %}
+                            {% if event.going_count > 4 %}
+                            <div class="event-avatar-img" style="background:#e8f5e9; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:700; color:#2e7d32;">
+                                +{{ event.going_count - 4 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if event.going_count > 0 %}
+                        <span class="event-going-count">
+                            {{ event.going_count }} <span class="event-going-label">going</span>
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description snippet -->
+            {% if event.description %}
+            <div class="event-card-desc">{{ event.description[:120] }}{% if event.description|length > 120 %}…{% endif %}</div>
+            {% endif %}
+
+            <!-- Footer stats + View Details -->
+            <div class="event-card-footer">
+                <div style="display:flex; gap:20px;">
+                    <div class="event-stat">
+                        <i class="fa-solid fa-user-group"></i>
+                        <span class="event-stat-num">{{ event.going_count }}</span>
+                        <span>Going</span>
+                    </div>
+                    <div class="event-stat">
+                        <i class="fa-regular fa-heart"></i>
+                        <span class="event-stat-num">{{ event.interested_count }}</span>
+                        <span>Interested</span>
+                    </div>
+                </div>
+                <a href="{{ url_for('event_detail', event_id=event.event_id) }}" class="btn-view-detail">
+                    View Details <i class="fa-solid fa-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+
+    {% else %}
+        <div class="events-empty">
+            <i class="fa-solid fa-calendar-xmark"></i>
+            <p>No events found{% if search %} for "<strong>{{ search }}</strong>"{% endif %}.</p>
+        </div>
+    {% endif %}
+
 </div>
-
 </body>
 </html>

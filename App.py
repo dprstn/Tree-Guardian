@@ -1,5 +1,6 @@
 import csv
 import io
+import math
 import re
 
 
@@ -7,7 +8,7 @@ from flask import Flask, flash, render_template, request, redirect, url_for, ses
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta, timezone
 from database import db, User, Adoption, Observation, Observation_type, Tree, Species, Tag, TreeTag, LoyaltyLedger, \
-    Badge, UserBadge, UserTreeTag, uk_tz
+    Badge, UserBadge, UserTreeTag, uk_tz, Event, EventAttendee, EventComment, EventCommentLike
 from flask_mail import Mail, Message
 from sqlalchemy import or_, func, case
 import qrcode
@@ -39,6 +40,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 PROFILE_UPLOAD_FOLDER = os.path.join('static', 'uploads', 'profiles')
 app.config['PROFILE_UPLOAD_FOLDER'] = PROFILE_UPLOAD_FOLDER
 os.makedirs(PROFILE_UPLOAD_FOLDER, exist_ok=True)
+EVENT_UPLOAD_FOLDER = os.path.join('static', 'uploads', 'events')
+os.makedirs(EVENT_UPLOAD_FOLDER, exist_ok=True)
 
 BASE_URL = os.environ.get("BASE_URL", "https://127.0.0.1:5000")
 
@@ -499,6 +502,7 @@ def generate_qr(tree_id):
 
 @app.route('/local_trees')
 def local_trees():
+    mode = request.args.get('mode')
     if not session.get("is_active"):
         return redirect(url_for('login'))
 
@@ -640,6 +644,7 @@ def local_trees():
                            all_species=all_species,
                            all_tags=all_tags,
                            tree_count=Tree.query.count(),
+                           mode=mode
 
                            )
 
@@ -793,28 +798,40 @@ def tree_detail(tree_id):
 
 @app.route('/adopt_tree/<int:tree_id>', methods=['POST'])
 def adopt_tree(tree_id):
-    if not session.get("is_active"):
+
+    # 1. Check login
+    user_id = session.get("user_id")
+    if not user_id:
         return redirect(url_for('login'))
 
-    user = User.query.get(session.get('user_id'))
+    user = User.query.get(user_id)
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
 
-    existing =  Adoption.query.filter_by(tree_id=tree_id).first()
+    # 2. Check if already adopted
+    existing = Adoption.query.filter_by(tree_id=tree_id).first()
 
+    if existing:
+        flash("This tree is already adopted.", "danger")
+        return redirect(url_for('local_trees', status='available'))
 
-    if not existing:
+    # 3. Create adoption
+    new_adoption = Adoption(
+        tree_id=tree_id,
+        user_id=user.user_id,
+        start_date=date.today(),
+        end_date=date.today() + timedelta(days=365)
+    )
 
-        new_adoption = Adoption(
-            tree_id=tree_id,
-            user_id=user.user_id,
-            start_date=date.today(),
-            end_date=date.today() + timedelta(days=365)
+    db.session.add(new_adoption)
+    db.session.commit()
 
-        )
-        db.session.add(new_adoption)
-        db.session.commit()
+    # 4. Feedback
+    flash("Tree adopted successfully!", "success")
 
-
-    return  redirect(url_for('tree_detail', tree_id=tree_id))
+    # 5. Redirect back to filtered explore page
+    return redirect(url_for('local_trees', status='available'))
 
 @app.route('/add_observation/<int:tree_id>', methods=['POST'])
 def add_observation(tree_id):
@@ -1041,10 +1058,289 @@ def edit_tree(tree_id):
     return render_template('edit_tree.html', tree=tree, species_list=Species.query.all())
 @app.route('/events')
 def events():
-    if not session.get("is_active"):
+    if not session.get("user_id"):
         return redirect(url_for('login'))
 
-    return render_template('events.html')
+    tab = request.args.get('tab', 'upcoming')  # upcoming | joined
+    search = request.args.get('search', '').strip()
+    user_id = session['user_id']
+    now = datetime.now()
+
+    query = Event.query
+
+    if search:
+        query = query.filter(Event.title.ilike(f'%{search}%'))
+
+    if tab == 'joined':
+        joined_ids = [a.event_id for a in
+                      EventAttendee.query.filter_by(user_id=user_id).all()]
+        query = query.filter(Event.event_id.in_(joined_ids))
+
+    events_list = query.filter(Event.event_date >= now) \
+        .order_by(Event.event_date.asc()).all()
+
+    # For each event, find the current user's status
+    user_statuses = {}
+    for e in events_list:
+            e.going_count = EventAttendee.query.filter_by(
+                event_id=e.event_id, status='going'
+            ).count()
+
+    current_user = User.query.get(user_id)
+    return render_template('events.html',
+                           events=events_list,
+                           user_statuses=user_statuses,
+                           current_user=current_user,
+                           tab=tab,
+                           search=search,
+                           now=now)
+
+
+def haversine(lat1, lon1, lat2, lon2):
+    """Returns distance in km between two coordinate points."""
+    R = 6371  # Earth radius in km
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+@app.route('/events/<int:event_id>')
+def event_detail(event_id):
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+
+    event = Event.query.get_or_404(event_id)
+    user_id = session['user_id']
+    current_user = User.query.get(user_id)
+
+
+    nearby_trees = []
+    if event.latitude and event.longitude:
+        radius_km = 1.0  
+
+        
+        lat_delta = radius_km / 111.0
+        lon_delta = radius_km / (111.0 * abs(math.cos(math.radians(event.latitude))))
+
+        candidates = Tree.query.filter(
+            Tree.latitude.between(event.latitude - lat_delta, event.latitude + lat_delta),
+            Tree.longitude.between(event.longitude - lon_delta, event.longitude + lon_delta)
+        ).all()
+
+        # Haversine precise filter
+        for tree in candidates:
+            dist = haversine(event.latitude, event.longitude, tree.latitude, tree.longitude)
+            if dist <= radius_km:
+                nearby_trees.append({'tree': tree, 'distance_km': round(dist, 3)})
+
+        nearby_trees.sort(key=lambda x: x['distance_km'])
+
+        
+
+
+    attendee = EventAttendee.query.filter_by(
+        event_id=event_id, user_id=user_id).first()
+    user_status = attendee.status if attendee else None
+
+    comments = EventComment.query.filter_by(event_id=event_id) \
+        .order_by(EventComment.created_at.asc()).all()
+
+
+    liked_ids = {l.comment_id for l in
+                 EventCommentLike.query.filter_by(user_id=user_id).all()}
+
+    # top attendee avatars (max 5)
+    going_attendees = EventAttendee.query.filter_by(
+        event_id=event_id, status='going').limit(5).all()
+    total_going = EventAttendee.query.filter_by(
+        event_id=event_id, status='going'
+    ).count()
+
+    creator = User.query.get(event.created_by)
+    creator_badge = (
+        db.session.query(Badge)
+        .join(UserBadge, Badge.badge_id == UserBadge.badge_id)
+        .filter(UserBadge.user_id == creator.user_id)
+        .order_by(Badge.points_required.desc())
+        .first()
+    )
+
+    return render_template('event_detail.html',
+                           event=event,
+                           current_user=current_user,
+                           user_status=user_status,
+                           comments=comments,
+                           liked_ids=liked_ids,
+                           going_attendees=going_attendees,
+                           creator=creator,
+                           nearby_trees=nearby_trees,
+                           total_going=total_going,
+                           creator_badge=creator_badge)
+
+
+@app.route('/events/create', methods=['GET', 'POST'])
+def create_event():
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+
+    current_user = User.query.get(session['user_id'])
+    if current_user.role != 'admin':
+        flash("Only admins can create events.", "danger")
+        return redirect(url_for('events'))
+
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        about = request.form.get('about', '').strip()
+        location_name = request.form.get('location_name', '').strip()
+        latitude = request.form.get('latitude') or None
+        longitude = request.form.get('longitude') or None
+        event_date_str = request.form.get('event_date', '')
+        end_date_str = request.form.get('end_date', '')
+
+        if not title or not event_date_str:
+            flash("Title and event date are required.", "danger")
+            return render_template('create_event.html', current_user=current_user)
+
+        try:
+            event_date = datetime.strptime(event_date_str, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            flash("Invalid date format.", "danger")
+            return render_template('create_event.html', current_user=current_user)
+
+        end_date = None
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M')
+            except ValueError:
+                pass
+
+        image_url = ''
+        file = request.files.get('event_image')
+        if file and file.filename and allowed_file(file.filename):
+            filename = str(uuid.uuid4()) + '_' + secure_filename(file.filename)
+            save_path = os.path.join(EVENT_UPLOAD_FOLDER, filename)
+            file.save(save_path)
+            image_url = 'uploads/events/' + filename
+
+        new_event = Event(
+            title=title,
+            description=description,
+            about=about,
+            location_name=location_name,
+            latitude=float(latitude) if latitude else None,
+            longitude=float(longitude) if longitude else None,
+            event_date=event_date,
+            end_date=end_date,
+            image_url=image_url,
+            created_by=session['user_id']
+        )
+        db.session.add(new_event)
+        db.session.commit()
+        flash("Event created successfully!", "success")
+        return redirect(url_for('events'))
+    species_map = {s.species_id: s.species_name for s in Species.query.all()}
+    trees = Tree.query.all()
+    tree_data = [
+        {
+            'id': t.tree_id,
+            'lat': t.latitude,
+            'lng': t.longitude,
+            'health': t.health_status,
+            'species': species_map.get(t.species_id, 'Unknown')
+        }
+        for t in trees if t.latitude and t.longitude
+    ]
+
+    return render_template('create_event.html', current_user=current_user, tree_data=tree_data)
+
+
+@app.route('/events/<int:event_id>/attend', methods=['POST'])
+def attend_event(event_id):
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+
+    status = request.form.get('status', 'going')  # 'going' | 'interested'
+    user_id = session['user_id']
+
+    existing = EventAttendee.query.filter_by(
+        event_id=event_id, user_id=user_id).first()
+
+    if existing:
+        if existing.status == status:
+            # toggle off
+            db.session.delete(existing)
+        else:
+            existing.status = status
+    else:
+        db.session.add(EventAttendee(
+            event_id=event_id, user_id=user_id, status=status))
+
+    db.session.commit()
+    return redirect(request.referrer or url_for('event_detail', event_id=event_id))
+
+
+@app.route('/events/<int:event_id>/comment', methods=['POST'])
+def add_event_comment(event_id):
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+
+    content = request.form.get('content', '').strip()
+    if content:
+        comment = EventComment(
+            event_id=event_id,
+            user_id=session['user_id'],
+            content=content
+        )
+        db.session.add(comment)
+        db.session.commit()
+
+    return redirect(url_for('event_detail', event_id=event_id) + '#comments')
+
+
+
+@app.route('/events/comment/<int:comment_id>/like', methods=['POST'])
+def like_event_comment(comment_id):
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    comment = EventComment.query.get_or_404(comment_id)
+
+    existing = EventCommentLike.query.filter_by(
+        comment_id=comment_id, user_id=user_id).first()
+
+    if existing:
+        db.session.delete(existing)
+        comment.likes = max(0, comment.likes - 1)
+    else:
+        db.session.add(EventCommentLike(comment_id=comment_id, user_id=user_id))
+        comment.likes += 1
+
+    db.session.commit()
+    event_id = comment.event_id
+    return redirect(url_for('event_detail', event_id=event_id) + '#comments')
+
+
+
+@app.route('/events/<int:event_id>/delete', methods=['POST'])
+def delete_event(event_id):
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+
+    current_user = User.query.get(session['user_id'])
+    if current_user.role != 'admin':
+        flash("Unauthorised.", "danger")
+        return redirect(url_for('events'))
+
+    event = Event.query.get_or_404(event_id)
+    db.session.delete(event)
+    db.session.commit()
+    flash("Event deleted.", "success")
+    return redirect(url_for('events'))
+
 
 @app.route('/tag_tree/<int:tree_id>', methods=['POST'])
 def tag_tree(tree_id):

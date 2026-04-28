@@ -434,6 +434,7 @@
                     </div>
 
                     <!-- Footer: Adoption Logic -->
+                    <!-- Footer: Adoption Logic -->
                     <div class="adoption-bar">
                         <div class="adopter-info">
                             {% if adoption and user %}
@@ -442,11 +443,24 @@
                                 <i class="fa fa-circle-dot" style="color:#fbb034;"></i> Available to adopt
                             {% endif %}
                         </div>
-                        <a href="{{ url_for ('tree_detail', tree_id=tree.tree_id) }}" class="btn-view">view details<i class="fa fa-chevron-right"></i></a>
+                        <div class="adoption-actions">
+                            {% if mode == 'adopt' and not adoption %}
+
+                            <form method="POST" action="{{ url_for('adopt_tree', tree_id=tree.tree_id) }}" style="display:inline;">
+                                <button type="submit" class="btn-adopt">
+                                    Adopt
+                                </button>
+                            </form>
+                            {% endif %}
+
+                            <a href="{{ url_for ('tree_detail', tree_id=tree.tree_id) }}" class="btn-view">
+                                view details<i class="fa fa-chevron-right"></i>
+                            </a>
+                        </div>
                     </div>
-                </div>
-                {% endfor %}
-            </div>
+                    </div>
+                    {% endfor %}
+                    </div>
 
               <!-- End of tree-list -->
 
@@ -977,7 +991,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 </script>
-<!-- YOUR EXISTING JS ABOVE -->
+
 
 
 

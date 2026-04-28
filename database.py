@@ -1,9 +1,11 @@
+from email.policy import default
 from enum import unique
 
 import pytz
 from  flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
+from sqlalchemy.orm import backref
 
 db = SQLAlchemy()
 
@@ -73,9 +75,72 @@ class Adoption(db.Model):
 class Event(db.Model):
     event_id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, default='')
+    about = db.Column(db.Text, default='')
+    location_name = db.Column(db.String(200), default='')
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
     event_date = db.Column(db.DateTime, nullable=False)
+    end_date = db.Column(db.DateTime, nullable=True)
+    image_url  = db.Column(db.String(300),  default='')
+    created_by    = db.Column(db.Integer,
+                              db.ForeignKey('user.user_id'),
+                              nullable=False)
+    created_at    = db.Column(db.DateTime, default=lambda: datetime.now(uk_tz))
+    attendees = db.relationship('EventAttendee', backref='event', lazy='dynamic')
+
+class EventAttendee(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer,
+                         db.ForeignKey('event.event_id'),
+                         nullable=False)
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey('user.user_id'),
+                        nullable=False)
+
+    status = db.Column(db.String(20), nullable=False, default='going')
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='event_attendances')
+
+
+    __table_args__ = (
+        db.UniqueConstraint('event_id', 'user_id', name='uq_event_attendee'),
+    )
+
+class EventComment(db.Model):
+    comment_id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer,
+                         db.ForeignKey('event.event_id'),
+                         nullable=False)
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey('user.user_id'),
+                        nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    likes = db.Column(db.Integer, default=0)
+
+    author = db.relationship('User', backref='event_comments')
+    liked_by = db.relationship('EventCommentLike',
+                               backref='comment',
+                               cascade='all, delete-orphan')
+
+class EventCommentLike(db.Model):
+    __tablename__ = 'event_comment_like'
+
+    id = db.Column(db.Integer, primary_key=True)
+    comment_id = db.Column(db.Integer,
+                           db.ForeignKey('event_comment.comment_id'),
+                           nullable=False)
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey('user.user_id'),
+                        nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('comment_id', 'user_id', name='uq_comment_like'),
+    )
+
 
 class Tag(db.Model):
     tag_id = db.Column(db.Integer, primary_key=True)
@@ -111,6 +176,8 @@ class UserBadge(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), primary_key=True)
     badge_id = db.Column(db.Integer, db.ForeignKey('badge.badge_id'), primary_key=True)
     awarded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    badge = db.relationship('Badge', backref='user_badges')
 
 class UserTreeTag(db.Model):
     __tablename__ = 'user_tree_tags'
