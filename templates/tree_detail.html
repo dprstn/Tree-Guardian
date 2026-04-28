@@ -893,9 +893,8 @@
                 </div>
                 {% if not adoption %}
                     <form action="{{ url_for('adopt_tree', tree_id=tree.tree_id) }}" method="POST">
-
-                        <button type="submit" class="btn-adopt">+ Adopt Tree </button>
-
+                        <input type="hidden" name="next" value="{{ url_for('tree_detail', tree_id=tree.tree_id) }}">
+                        <button type="submit" class="btn-adopt">+ Adopt Tree</button>
                     </form>
                 {% else %}
                     <button class="btn-adopt" disabled>Adopted</button>

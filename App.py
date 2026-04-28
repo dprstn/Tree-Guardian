@@ -502,9 +502,7 @@ def generate_qr(tree_id):
 
 @app.route('/local_trees')
 def local_trees():
-    mode = request.args.get('mode')
-    if not session.get("is_active"):
-        return redirect(url_for('login'))
+
 
     user = User.query.get(session.get('user_id'))
 
@@ -634,6 +632,13 @@ def local_trees():
 
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     trees_on_page = pagination.items
+    mode = request.args.get('mode', '')
+    if mode == 'adopt' and not status_filters:
+        query = query.filter(Adoption.adoption_id.is_(None))
+        trees = query.distinct().all()
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        trees_on_page = pagination.items
+        all_trees = trees
     return render_template('local_trees.html',
                            user=user,
                            trees=trees_on_page, # use for cards
@@ -780,8 +785,6 @@ def tree_detail(tree_id):
 
 
 
-
-
     return render_template('tree_detail.html',
                            tree=tree,
                            species=species,
@@ -831,7 +834,8 @@ def adopt_tree(tree_id):
     flash("Tree adopted successfully!", "success")
 
     # 5. Redirect back to filtered explore page
-    return redirect(url_for('local_trees', status='available'))
+    next_url = request.form.get('next')
+    return redirect(next_url if next_url else url_for('local_trees', tree_id=tree_id))
 
 @app.route('/add_observation/<int:tree_id>', methods=['POST'])
 def add_observation(tree_id):

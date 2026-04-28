@@ -447,9 +447,8 @@
                             {% if mode == 'adopt' and not adoption %}
 
                             <form method="POST" action="{{ url_for('adopt_tree', tree_id=tree.tree_id) }}" style="display:inline;">
-                                <button type="submit" class="btn-adopt">
-                                    Adopt
-                                </button>
+                                <input type="hidden" name="next" value="{{ request.url }}">
+                                <button type="submit" class="btn-adopt">Adopt</button>
                             </form>
                             {% endif %}
 
