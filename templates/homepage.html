@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tree Guardian - Home</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=community-feed-2">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
 </head>
 
@@ -58,7 +58,6 @@
         <h1 class="welcome-header">
             Welcome back, <span class="username-underline">{{ username }}</span>!
         </h1>
-        <p style="text-align: center; color: red;">DEBUG: Your role is: "{{ role }}"</p>
 
         <div class="container" style="text-align: center; color: #333; margin-top: 20px;">
             <p style="font-size: 16px; margin: 0 auto;">
@@ -70,7 +69,7 @@
 
         <div class="button-grid">
             <a href="#" class="c-button gold-variation">ADOPTED TREES • {{ adopted_count }}</a>
-            <a href="#" class="c-button gold-variation">ADD OBSERVATION</a>
+            <a href="{{ url_for('local_trees', mode='observe') }}" class="c-button gold-variation">ADD OBSERVATION</a>
             <div class="center-single-button">
                 <a href="{{ url_for('local_trees', mode='adopt') }}" class="c-button gold-variation">
                         ADOPT A TREE
@@ -119,6 +118,85 @@
                 </div>
             </a>
         </div>
+        
+        <section class="dashboard-feed-wrap">
+            <div class="dashboard-feed-section">
+                <div class="recent-activity-header dashboard-activity-heading">
+                    <h2 class="section-heading dashboard-section-heading">RECENT ACTIVITY</h2>
+                    <a href="{{ url_for('user_activity') }}" class="view-all-btn" aria-label="View All">View All</a>
+                </div>
+                
+                <details class="dashboard-activity-dropdown">
+                    <summary class="activity-dropdown-toggle">
+                        <span><i class="fa-solid fa-clock-rotate-left"></i> Recent activity</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </summary>
+
+                    <div class="activity-feed dashboard-activity-feed">
+                        {% if recent_activities %}
+                            {% for activity in recent_activities %}
+                                <div class="activity-card dashboard-activity-card">
+                                    <div class="activity-icon-container">
+                                        <i class="fa-solid {{ activity.icon }}"></i>
+                                    </div>
+                                    <div class="activity-details">
+                                        <h4 class="activity-title">{{ activity.title }}</h4>
+                                        <p class="activity-meta">{{ activity.details }}</p>
+                                        <span class="activity-date">{{ activity.date.strftime('%B %d, %Y') }}</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="activity-empty">No recent activity found.</p>
+                        {% endif %}
+                    </div>
+                </details>
+            </div>
+
+            <div class="dashboard-feed-section community-feed-section" id="community-feed">
+                <div class="recent-activity-header dashboard-activity-heading">
+                    <h2 class="section-heading dashboard-section-heading">COMMUNITY FEED</h2>
+                    <div class="community-feed-actions">
+                        <form action="{{ url_for('homepage') }}#community-feed" method="GET" class="community-sort-form">
+                            <select name="community_sort" class="community-sort-select" onchange="this.form.submit()">
+                                <option value="newest" {% if community_sort == 'newest' %}selected{% endif %}>Newest First</option>
+                                <option value="oldest" {% if community_sort == 'oldest' %}selected{% endif %}>Oldest First</option>
+                            </select>
+                        </form>
+                        <a href="{{ url_for('community_feed', sort=community_sort) }}" class="view-all-btn" aria-label="View All">View All</a>
+                    </div>
+                </div>
+
+                <details class="dashboard-activity-dropdown" open>
+                    <summary class="activity-dropdown-toggle">
+                        <span><i class="fa-solid fa-seedling"></i> Community observations</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </summary>
+
+                    <div class="activity-feed dashboard-activity-feed">
+                        {% if community_feed %}
+                            {% for item in community_feed %}
+                                <div class="activity-card dashboard-activity-card">
+                                    <div class="activity-icon-container">
+                                        <i class="fa-solid {{ item.icon }}"></i>
+                                    </div>
+                                    <div class="activity-details">
+                                        <h4 class="activity-title">{{ item.title }}</h4>
+                                        <p class="activity-meta">
+                                            {{ item.user_name }} @{{ item.username }} on Tree #{{ item.tree_id }}
+                                        </p>
+                                        <p class="activity-meta">{{ item.details }}</p>
+                                        <span class="activity-date">{{ item.date.strftime('%B %d, %Y') }}</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="activity-empty">No community observations yet.</p>
+                        {% endif %}
+                    </div>
+                </details>
+            </div>
+        </section>
 
     </div>
 

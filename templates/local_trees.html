@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Explore Local Trees</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=observation-popup-3">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
 </head>
 <body class="explore-body">
@@ -22,6 +22,24 @@
     </div>
 </nav>
     <div class="explorer-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="action-flash-stack">
+                    {% for category, message in messages %}
+                        <div class="action-flash action-flash-{{ category }}">
+                            {% if category == 'points' %}
+                                <i class="fa-solid fa-circle-plus"></i>
+                            {% elif category == 'success' %}
+                                <i class="fa-solid fa-circle-check"></i>
+                            {% else %}
+                                <i class="fa-solid fa-circle-info"></i>
+                            {% endif %}
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
         <h1 class="explore-header">
             <span>Explore Local Trees</span>
         </h1>
@@ -30,6 +48,9 @@
         <form method="GET" action="{{url_for('local_trees')}}" id="filterForm">
             <input type="hidden" name="view" id="viewInput" value="{{ request.args.get('view', 'list') }}">
             <input type="hidden" name="tag" id="tagInput" value="{{ request.args.get('tag', '') }}">
+            {% if mode %}
+            <input type="hidden" name="mode" value="{{ mode }}">
+            {% endif %}
             <div class="search-bar-container">
                 <i class="fa fa-search search-icon"></i>
                 <input type="text" name="search" class="search-input" value="{{ search_query }}" placeholder="Search trees, species, tag ID or #tags ...">
@@ -452,6 +473,15 @@
                             </form>
                             {% endif %}
 
+                            {% if mode == 'observe' %}
+                            <button type="button"
+                                    class="btn-add-observation"
+                                    data-tree-id="{{ tree.tree_id }}"
+                                    data-species-name="{{ species.species_name }}">
+                                <i class="fa fa-plus"></i> Add Observation
+                            </button>
+                            {% endif %}
+
                             <a href="{{ url_for ('tree_detail', tree_id=tree.tree_id) }}" class="btn-view">
                                 view details<i class="fa fa-chevron-right"></i>
                             </a>
@@ -504,6 +534,101 @@
         </div>
 
     </div>
+
+    <div class="observation-modal-overlay" id="observation-modal" onclick="closeObservationOnOverlay(event)">
+        <div class="observation-modal-sheet" role="dialog" aria-modal="true" aria-labelledby="observation-modal-title">
+            <button type="button" class="observation-modal-close" onclick="closeObservationModal()" aria-label="Close">
+                <i class="fa fa-xmark"></i>
+            </button>
+            <div class="observation-modal-handle" aria-hidden="true"></div>
+
+            <form id="observation-form" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="next" value="{{ request.url }}">
+
+                <h2 id="observation-modal-title">Add Observation</h2>
+                <p class="observation-modal-sub">Help the community by sharing what you see.</p>
+
+                <div class="observation-field">
+                    <span class="observation-label">Observation Type</span>
+                    <div class="observation-type-grid">
+                        <label class="observation-type-option">
+                            <input type="radio" name="obs_type" value="Wildlife" checked onchange="toggleObservationHealth()">
+                            <span class="observation-type-card">
+                                <i class="fa fa-leaf observation-type-icon wildlife"></i>
+                                <span>
+                                    <strong>Wildlife Sighting</strong>
+                                    <small>Animals, birds, insects, etc.</small>
+                                </span>
+                            </span>
+                        </label>
+
+                        <label class="observation-type-option">
+                            <input type="radio" name="obs_type" value="Disease" onchange="toggleObservationHealth()">
+                            <span class="observation-type-card">
+                                <i class="fa fa-triangle-exclamation observation-type-icon alert"></i>
+                                <span>
+                                    <strong>Health Alert</strong>
+                                    <small>Disease, damage, or other issues</small>
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="observation-field observation-health-field" id="observation-health-field">
+                    <label class="observation-label" for="observation-health-status">Tree Health Status</label>
+                    <select name="health_status" id="observation-health-status">
+                        <option value="">Select health status</option>
+                        <option value="Critical">Critical</option>
+                        <option value="Needs Attention">Needs Attention</option>
+                        <option value="Healthy">Healthy</option>
+                    </select>
+                </div>
+
+                <div class="observation-field">
+                    <label class="observation-label" for="observation-notes">Your Notes</label>
+                    <div class="observation-notes-wrap">
+                        <textarea id="observation-notes"
+                                  name="notes"
+                                  maxlength="300"
+                                  required
+                                  placeholder="Write your observation notes..."
+                                  oninput="updateObservationCount()"></textarea>
+                        <span id="observation-char-count">0/300</span>
+                    </div>
+                </div>
+
+                <div class="observation-field">
+                    <label class="observation-label" for="observation-tags">Tags <span>(optional)</span></label>
+                    <input id="observation-tags"
+                           class="observation-text-input"
+                           type="text"
+                           name="tags"
+                           placeholder="#disease #dry #fungus">
+                </div>
+
+                <div class="observation-field">
+                    <label class="observation-label" for="observation-photo">Add Photo <span>(optional)</span></label>
+                    <label class="observation-photo-drop" for="observation-photo">
+                        <i class="fa-regular fa-image"></i>
+                        <strong id="observation-photo-label">Tap to add a photo</strong>
+                        <small>JPG, PNG up to 5MB</small>
+                    </label>
+                    <input id="observation-photo" type="file" name="photo" accept="image/png,image/jpeg" onchange="showObservationPhotoName()">
+                    <p class="observation-photo-help">
+                        <i class="fa-regular fa-camera"></i> Photos help others understand what you saw
+                    </p>
+                </div>
+
+                <div class="observation-modal-actions">
+                    <button type="button" class="observation-cancel-btn" onclick="closeObservationModal()">Cancel</button>
+                    <button type="submit" class="observation-submit-btn">
+                        <i class="fa-regular fa-paper-plane"></i> Submit Observation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 <script>
 const TREE_DATA = [
     {% for tree, species, adoption, user, obs_count, last_observed in all_trees %}
@@ -541,6 +666,68 @@ function applyTag(tagName) {
     // 3. Submit the form
     document.getElementById('filterForm').submit();
 }
+
+function openObservationModal(treeId, speciesName) {
+    const modal = document.getElementById('observation-modal');
+    const form = document.getElementById('observation-form');
+
+    form.action = `/add_observation/${treeId}`;
+    form.setAttribute('aria-label', `Add observation for ${speciesName} tree ${treeId}`);
+    form.reset();
+    document.querySelector('input[name="obs_type"][value="Wildlife"]').checked = true;
+    document.getElementById('observation-char-count').textContent = '0/300';
+    document.getElementById('observation-photo-label').textContent = 'Tap to add a photo';
+    toggleObservationHealth();
+    modal.classList.add('open');
+    document.body.classList.add('observation-modal-open');
+}
+
+function closeObservationModal() {
+    document.getElementById('observation-modal').classList.remove('open');
+    document.body.classList.remove('observation-modal-open');
+}
+
+function closeObservationOnOverlay(event) {
+    if (event.target.id === 'observation-modal') {
+        closeObservationModal();
+    }
+}
+
+function toggleObservationHealth() {
+    const selected = document.querySelector('input[name="obs_type"]:checked');
+    const healthField = document.getElementById('observation-health-field');
+    const healthSelect = document.getElementById('observation-health-status');
+    const isHealthAlert = selected && selected.value === 'Disease';
+
+    healthField.style.display = isHealthAlert ? 'block' : 'none';
+    healthSelect.required = isHealthAlert;
+    if (!isHealthAlert) {
+        healthSelect.value = '';
+    }
+}
+
+function updateObservationCount() {
+    const notes = document.getElementById('observation-notes');
+    document.getElementById('observation-char-count').textContent = `${notes.value.length}/300`;
+}
+
+function showObservationPhotoName() {
+    const input = document.getElementById('observation-photo');
+    const label = document.getElementById('observation-photo-label');
+    label.textContent = input.files && input.files[0] ? input.files[0].name : 'Tap to add a photo';
+}
+
+document.querySelectorAll('.btn-add-observation').forEach(button => {
+    button.addEventListener('click', function() {
+        openObservationModal(this.dataset.treeId, this.dataset.speciesName);
+    });
+});
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeObservationModal();
+    }
+});
 function clearFilters() {
 
     document.getElementById('tagInput').value = '';

@@ -4,149 +4,293 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile - Tree Guardian</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=profile-showcase-2">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
 </head>
-<body class="explore-body">
+<body class="profile-showcase-body">
 
-    <div class="main-content profile-layout">
-        <a href="{{ url_for('homepage') }}" class="btn-back"><i class="fa-solid fa-arrow-left"></i> Back</a>
-
-        <!-- Main Card -->
-        <div class="profile-main-card">
-            <div class="profile-avatar-wrap">
-                <!-- If user has default pic, show the FontAwesome Icon -->
-                {% if user.profile_pic == 'default_user.png' %}
-                    <div class="profile-avatar-lg default-avatar-bg">
-                        <i class="fa-solid fa-user"></i>
-                    </div>
+<nav class="mobile-nav profile-home-nav">
+    <div style="flex: 1;"></div>
+    <div class="nav-center">
+        <a href="{{ url_for('homepage') }}" class="nav-item">
+            <i class="fa-solid fa-house"></i> Home
+        </a>
+        <a href="{{ url_for('local_trees') }}" class="nav-item">
+            <i class="fa-solid fa-tree"></i> Local Trees
+        </a>
+        <a href="{{ url_for('events') }}" class="nav-item">
+            <i class="fa-solid fa-bullhorn"></i> Events
+        </a>
+        {% if user.role and user.role.lower() == 'admin' %}
+        <a href="{{ url_for('add_tree') }}" class="nav-item">
+            <i class="fa-solid fa-pen-to-square"></i> Add a Tree
+        </a>
+        {% endif %}
+    </div>
+    <div class="nav-right-profile">
+        <div class="profile-dropdown">
+            <div class="profile-trigger orange-theme">
+                {% if user.profile_pic and user.profile_pic != 'default_user.png' %}
+                    <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_pic) }}"
+                         class="nav-avatar">
                 {% else %}
-                    <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_pic) }}" class="profile-avatar-lg">
+                    <i class="fa-solid fa-user"></i>
                 {% endif %}
-
-                <button class="cam-btn-overlay" onclick="document.getElementById('editModal').style.display='flex'">
-                    <i class="fa-solid fa-camera"></i>
-                </button>
+                <span class="user-name-text">{{ user.username }}</span>
+                <i class="fa fa-chevron-down"></i>
             </div>
-
-            <h1>{{ user.first_name }} {{ user.last_name }}</h1>
-            <p>@{{ user.username }}</p>
-            {% if current_badge %}
-            <div class="current-badge">
-
-                <div class="badge-icon-main">
-                    <i class="{{ current_badge.icon_class }}"></i>
-                </div>
-
-                <span class="badge-name">
-                    {{ current_badge.name }}
-                </span>
-
-            </div>
-            {% endif %}
-
-            <button class="btn-pill btn-edit-profile" onclick="document.getElementById('editModal').style.display='flex'">
-                <i class="fa-solid fa-user-pen"></i> Edit Profile
-            </button>
-
-            <div class="points-display-bar">
-                <div class="p-bar-content">
-                    <i class="fa-solid fa-leaf"></i>
-                    <div class="p-bar-text">
-                        <span class="p-bar-val">{{ points }}</span>
-                        <span class="p-bar-lab">Total Points</span>
-                    </div>
-                </div>
+            <div class="dropdown-content">
+                <a href="{{ url_for('profile') }}"><i class="fa-solid fa-circle-user"></i> Profile</a>
+                <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
             </div>
         </div>
+    </div>
+</nav>
 
-        <h2 class="section-heading">Badges & Activity</h2>
-
-        <div class="activity-feed">
-            <!-- Badges Section (Appears if user has badges) -->
-            <div class="badges-row">
-                {% for badge in badges %}
-                    <div class="badge-mini-card">
-                        <i class="{{ badge.icon_class }}"></i>
-                        <span>{{ badge.name }}</span>
+<main class="profile-showcase-shell">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="profile-flash-stack">
+                {% for category, message in messages %}
+                    <div class="profile-flash profile-flash-{{ category }}">
+                        {% if category == 'points' %}
+                            <i class="fa-solid fa-circle-plus"></i>
+                        {% elif category == 'success' %}
+                            <i class="fa-solid fa-circle-check"></i>
+                        {% else %}
+                            <i class="fa-solid fa-circle-info"></i>
+                        {% endif %}
+                        {{ message }}
                     </div>
                 {% endfor %}
             </div>
+        {% endif %}
+    {% endwith %}
 
-            <!-- Activity Feed Section -->
+    <section class="profile-hero-card">
+        <div class="profile-hero-grid">
+            <div class="profile-photo-block">
+                <div class="profile-photo-ring">
+                    {% if user.profile_pic and user.profile_pic != 'default_user.png' %}
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_pic) }}" alt="{{ user.username }}">
+                    {% else %}
+                        <i class="fa-solid fa-user"></i>
+                    {% endif %}
+                    <button class="profile-camera-button" onclick="openProfileEdit()" aria-label="Edit profile photo">
+                        <i class="fa-solid fa-camera"></i>
+                    </button>
+                </div>
+            </div>
 
-           <div class="activity-timeline">
+            <div class="profile-identity-block">
+                <p class="profile-kicker">My Profile</p>
+                <h1>{{ user.first_name }} {{ user.last_name }}</h1>
+                <p class="profile-handle">@{{ user.username }}</p>
 
-            {% for item in activity %}
-            <div class="timeline-item">
+                {% if current_badge %}
+                <div class="profile-ribbon">
+                    <span><i class="{{ current_badge.icon_class }}"></i></span>
+                    {{ current_badge.name }}
+                </div>
+                {% endif %}
+            </div>
 
-                <div class="timeline-dot"></div>
+            <div class="profile-action-block">
+                <button class="profile-edit-button" onclick="openProfileEdit()">
+                    <i class="fa-regular fa-pen-to-square"></i> Edit Profile
+                </button>
+            </div>
+        </div>
 
-                <div class="timeline-card">
+        <div class="profile-metrics-row">
+            <div class="profile-points-panel">
+                <i class="fa-solid fa-leaf"></i>
+                <div>
+                    <strong>{{ "{:,}".format(points) }}</strong>
+                    <span>Total Points</span>
+                </div>
+            </div>
 
-                    <div class="timeline-header">
-                        <span class="badge-label">Badge Earned</span>
-                        <span class="timeline-date">
+            <div class="profile-progress-panel">
+                <div class="profile-progress-copy">
+                    <span>Badge Progress</span>
+                    {% if next_badge %}
+                        <strong>{{ points_to_next }} points to {{ next_badge.name }}</strong>
+                    {% else %}
+                        <strong>Top badge reached</strong>
+                    {% endif %}
+                </div>
+                <div class="profile-progress-track">
+                    <div class="profile-progress-fill" style="width: {{ progress_pct }}%;"></div>
+                </div>
+                <div class="profile-progress-labels">
+                    <span>{{ current_badge.name if current_badge else 'Getting Started' }}</span>
+                    <span>{{ next_badge.name if next_badge else 'Complete' }}</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="profile-rules-card">
+        <div class="profile-section-heading">
+            <h2>How Points Work</h2>
+            <span>Rewards update instantly</span>
+        </div>
+        <div class="profile-rules-grid">
+            {% for rule in point_rules %}
+                <div class="profile-rule-tile">
+                    <i class="{{ rule.icon }}"></i>
+                    <span>{{ rule.label }}</span>
+                    <strong>+{{ rule.points }}</strong>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="profile-activity-card">
+        <div class="profile-section-heading">
+            <h2>Activity</h2>
+            <a href="{{ url_for('user_activity') }}">View all</a>
+        </div>
+
+        <div class="profile-badge-strip">
+            {% if badges %}
+                {% for badge in badges %}
+                    <span class="profile-badge-pill">
+                        <i class="{{ badge.icon_class }}"></i>{{ badge.name }}
+                    </span>
+                {% endfor %}
+            {% else %}
+                <span class="profile-empty">No badges yet.</span>
+            {% endif %}
+        </div>
+
+        <div class="profile-activity-list">
+            {% if activity %}
+                {% for item in activity %}
+                    <article class="profile-activity-item">
+                        <div class="profile-activity-icon">
+                            {% if 'Photo' in item.reason %}
+                                <i class="fa-regular fa-image"></i>
+                            {% elif 'Observation' in item.reason %}
+                                <i class="fa-solid fa-comments"></i>
+                            {% elif 'Adopted' in item.reason %}
+                                <i class="fa-solid fa-seedling"></i>
+                            {% elif 'Tagged' in item.reason %}
+                                <i class="fa-solid fa-tag"></i>
+                            {% else %}
+                                <i class="fa-solid fa-leaf"></i>
+                            {% endif %}
+                        </div>
+                        <div class="profile-activity-copy">
+                            <span>
+                                {% if 'Photo' in item.reason %}
+                                    Photo Added
+                                {% elif 'Observation' in item.reason %}
+                                    Observation
+                                {% elif 'Adopted' in item.reason %}
+                                    Tree Adopted
+                                {% elif 'Tagged' in item.reason %}
+                                    Tree Tagged
+                                {% else %}
+                                    Points Earned
+                                {% endif %}
+                            </span>
+                            <strong>{{ item.reason }}</strong>
+                            <p>You earned <b>+{{ item.points }}</b> points.</p>
+                        </div>
+                        <time>
                             {{ item.created_at.strftime('%d %b %Y') if item.created_at else '' }}<br>
                             {{ item.created_at.strftime('%I:%M %p') if item.created_at else '' }}
-                        </span>
-                    </div>
-
-                    <div class="timeline-body">
-
-                        <div class="badge-icon">
-                            <i class="fa-solid fa-tree"></i>
-                        </div>
-
-                        <div class="timeline-text">
-                            <strong>{{ item.reason }}</strong>
-                            <p>You earned this by gaining {{ item.points }} points.</p>
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-            {% endfor %}
-
+                        </time>
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p class="profile-empty">No activity yet. Add an observation, tag a tree, or adopt one to start earning points.</p>
+            {% endif %}
         </div>
-    <!-- Edit Modal (Logic Fixed for centering) -->
-    <div id="editModal" class="modal-overlay" onclick="if(event.target == this) this.style.display='none'">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h2 class="modal-title">Edit Profile</h2>
-                <button class="close-x" onclick="document.getElementById('editModal').style.display='none'">&times;</button>
+    </section>
+</main>
+
+<nav class="profile-bottom-nav">
+    <a href="{{ url_for('homepage') }}"><i class="fa-solid fa-house"></i><span>Home</span></a>
+    <a href="{{ url_for('local_trees', view='map') }}"><i class="fa-regular fa-compass"></i><span>Map</span></a>
+    <a href="{{ url_for('local_trees') }}"><i class="fa-solid fa-users"></i><span>Local Trees</span></a>
+    <a href="{{ url_for('events') }}"><i class="fa-regular fa-calendar"></i><span>Events</span></a>
+    <a href="{{ url_for('profile') }}" class="active"><i class="fa-solid fa-ellipsis"></i><span>More</span></a>
+</nav>
+
+<div id="editModal" class="profile-edit-overlay" onclick="if(event.target == this) closeProfileEdit()">
+    <div class="profile-edit-sheet">
+        <div class="profile-edit-header">
+            <h2>Edit Profile</h2>
+            <button onclick="closeProfileEdit()" aria-label="Close">&times;</button>
+        </div>
+
+        <form action="{{ url_for('edit_profile') }}" method="POST" enctype="multipart/form-data">
+            <div class="profile-edit-photo">
+                <label>Profile Photo</label>
+                <div class="profile-edit-preview">
+                    {% if user.profile_pic and user.profile_pic != 'default_user.png' %}
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_pic) }}" alt="{{ user.username }}">
+                    {% else %}
+                        <i class="fa-solid fa-user"></i>
+                    {% endif %}
+                    <span><i class="fa-solid fa-camera"></i></span>
+                </div>
+                <label for="file-upload" class="profile-change-photo">
+                    <i class="fa-solid fa-arrow-up-from-bracket"></i> Change Photo
+                </label>
+                <input id="file-upload" type="file" name="profile_pic" accept="image/*" hidden>
+                <small>JPG, PNG up to 5MB</small>
             </div>
 
-            <form action="{{ url_for('edit_profile') }}" method="POST" enctype="multipart/form-data">
-                <div class="edit-photo-section">
-                    <label class="input-label-gray">Profile Photo</label>
-                    <div class="edit-avatar-wrapper">
-                        {% if user.profile_pic == 'default_user.png' %}
-                            <div class="edit-avatar-preview default-avatar-bg"><i class="fa-solid fa-user"></i></div>
-                        {% else %}
-                            <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_pic) }}" class="edit-avatar-preview">
-                        {% endif %}
-                    </div>
-                    <label for="file-upload" class="btn-change-photo"><i class="fa-solid fa-upload"></i> Change Photo</label>
-                    <input id="file-upload" type="file" name="profile_pic" accept="image/*" style="display:none;">
-                </div>
+            <div class="profile-form-field">
+                <label>Username</label>
+                <input type="text" name="username" value="{{ user.username }}" required>
+                <small>This will be your unique username.</small>
+            </div>
 
-                <div class="form-group-modern"><label>Username</label><input type="text" name="username" value="{{ user.username }}" required></div>
-                <div class="form-row-modern">
-                    <div class="form-group-modern"><label>First Name</label><input type="text" name="first_name" value="{{ user.first_name }}" required></div>
-                    <div class="form-group-modern"><label>Last Name</label><input type="text" name="last_name" value="{{ user.last_name }}" required></div>
+            <div class="profile-form-grid">
+                <div class="profile-form-field">
+                    <label>First Name</label>
+                    <input type="text" name="first_name" value="{{ user.first_name }}" required>
                 </div>
-                <div class="form-group-modern"><label>Date of Birth</label><input type="date" name="dob" value="{{ user.dob }}"></div>
+                <div class="profile-form-field">
+                    <label>Last Name</label>
+                    <input type="text" name="last_name" value="{{ user.last_name }}" required>
+                </div>
+            </div>
 
-                <div class="modal-actions">
-                    <button type="button" class="btn-cancel-modern" onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
-                    <button type="submit" class="btn-save-modern">Save Changes</button>
-                </div>
-            </form>
-        </div>
+            <div class="profile-form-field">
+                <label>Date of Birth</label>
+                <input type="date" name="dob" value="{{ user.dob }}">
+            </div>
+
+            <div class="profile-edit-actions">
+                <button type="button" onclick="closeProfileEdit()">Cancel</button>
+                <button type="submit">Save Changes</button>
+            </div>
+        </form>
     </div>
+</div>
+
+<script>
+function openProfileEdit() {
+    document.getElementById('editModal').classList.add('open');
+}
+
+function closeProfileEdit() {
+    document.getElementById('editModal').classList.remove('open');
+}
+
+window.setTimeout(function() {
+    document.querySelectorAll('.profile-flash').forEach(function(el) {
+        el.classList.add('is-hiding');
+        window.setTimeout(function() { el.remove(); }, 650);
+    });
+}, 4500);
+</script>
 
 </body>
 </html>

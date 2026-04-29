@@ -51,6 +51,10 @@ REQUIRED_COLUMNS = {
 }
 VALID_HEALTH = {'Healthy', 'Needs Attention', 'Critical'}
 MAX_ERROR_DISPLAY = 10
+POINTS_OBSERVATION = 15
+POINTS_PHOTO = 5
+POINTS_TREE_TAG = 20
+POINTS_ADOPTION = 50
 
 mail = Mail(app)
 db.init_app(app)
@@ -299,6 +303,9 @@ def award_points(user_id, points, reason):
             db.session.add(new_badge)
         db.session.commit()
 
+def flash_points(points, label):
+    flash(f"{label}: +{points} points added!", "points")
+
 
 @app.route('/homepage')
 def homepage():
@@ -327,11 +334,14 @@ def homepage():
 
         user.role = "admin"
         db.session.commit()
-    print(f"DEBUG: user {user.username} has a role {user.role}")
+    
 
     adopted_count = Adoption.query.filter_by(user_id=user.user_id).count()
 
     total_trees_in_db = Tree.query.count()
+
+    current_badge_entry = UserBadge.query.filter_by(user_id=user.user_id).order_by(UserBadge.awarded_at.desc()).first()
+    current_badge = current_badge_entry.badge if current_badge_entry else None
 
     #3. getting list of all the trees the user has adopted and list of trees IDs to filter observations
 
@@ -360,13 +370,206 @@ def homepage():
         obs_count, wildlife_count, disease_count = 0, 0, 0
 
 
+    # Fetch recent activities for the user
+    recent_activities = []
+    
+    # 1. Observations
+    user_observations = db.session.query(Observation, Observation_type).join(
+        Observation_type, Observation.observation_type_id == Observation_type.observation_type_id
+    ).filter(Observation.user_id == user.user_id).all()
+    
+    for obs, o_type in user_observations:
+        recent_activities.append({
+            'type': 'observation',
+            'title': f'{o_type.observation_category} Report',
+            'date': obs.observed_time,
+            'details': obs.notes,
+            'icon': 'fa-magnifying-glass',
+            'tree_id': obs.tree_id
+        })
+        
+    # 2. Adoptions
+    user_adoptions = Adoption.query.filter_by(user_id=user.user_id).all()
+    for adopt in user_adoptions:
+        # Convert date to datetime for sorting
+        adopt_time = datetime.combine(adopt.start_date, datetime.min.time())
+        recent_activities.append({
+            'type': 'adoption',
+            'title': 'Adopted a Tree',
+            'date': adopt_time,
+            'details': f'Started adoption on {adopt.start_date.strftime("%Y-%m-%d")}',
+            'icon': 'fa-seedling',
+            'tree_id': adopt.tree_id
+        })
+        
+    # 3. Tags
+    user_tags = UserTreeTag.query.filter_by(user_id=user.user_id).all()
+    for tag in user_tags:
+        recent_activities.append({
+            'type': 'tag',
+            'title': 'Tagged a Tree',
+            'date': tag.tagged_at,
+            'details': f'Location: {tag.location_name}' if tag.location_name else 'Tagged a tree location',
+            'icon': 'fa-tag',
+            'tree_id': tag.tree_id
+        })
+        
+    # Sort by date descending and take top 3
+    recent_activities.sort(key=lambda x: x['date'], reverse=True)
+    top_activities = recent_activities[:3]
+
+    community_sort = request.args.get('community_sort', 'newest')
+    if community_sort not in ('newest', 'oldest'):
+        community_sort = 'newest'
+
+    community_query = db.session.query(Observation, Observation_type, User).join(
+        Observation_type, Observation.observation_type_id == Observation_type.observation_type_id
+    ).join(
+        User, Observation.user_id == User.user_id
+    ).filter(
+        Observation.user_id != user.user_id
+    )
+
+    if community_sort == 'oldest':
+        community_query = community_query.order_by(Observation.observed_time.asc())
+    else:
+        community_query = community_query.order_by(Observation.observed_time.desc())
+
+    community_feed = []
+    for obs, o_type, obs_user in community_query.all():
+        community_feed.append({
+            'title': f'{o_type.observation_category} Report',
+            'date': obs.observed_time,
+            'details': obs.notes,
+            'icon': 'fa-paw' if o_type.observation_category == 'Wildlife' else 'fa-virus-covid',
+            'tree_id': obs.tree_id,
+            'user_name': f'{obs_user.first_name} {obs_user.last_name}',
+            'username': obs_user.username
+        })
+
     return render_template("homepage.html", user=user, username=user.username, role=user.role.lower() if user.role else 'user', adopted_count=adopted_count,
                            total_trees_in_db=total_trees_in_db,
                            obs_count=obs_count,
                            wildlife_count=wildlife_count,
                            disease_count=disease_count,
                            points=total_points,
-                           community_points=community_points)
+                           community_points=community_points,
+                           current_badge=current_badge,
+                           recent_activities=top_activities,
+                           community_feed=community_feed,
+                           community_sort=community_sort)
+
+
+@app.route('/activity')
+def user_activity():
+    if not session.get("is_active"):
+        return redirect(url_for('login'))
+
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+
+    sort_order = request.args.get('sort', 'newest')
+    if sort_order not in ('newest', 'oldest'):
+        sort_order = 'newest'
+
+    current_badge_entry = UserBadge.query.filter_by(user_id=user.user_id).order_by(UserBadge.awarded_at.desc()).first()
+    current_badge = current_badge_entry.badge if current_badge_entry else None
+
+    all_activities = []
+    
+    # 1. Observations
+    user_observations = db.session.query(Observation, Observation_type).join(
+        Observation_type, Observation.observation_type_id == Observation_type.observation_type_id
+    ).filter(Observation.user_id == user.user_id).all()
+    
+    for obs, o_type in user_observations:
+        all_activities.append({
+            'type': 'observation',
+            'title': f'{o_type.observation_category} Report',
+            'date': obs.observed_time,
+            'details': obs.notes,
+            'icon': 'fa-magnifying-glass',
+            'tree_id': obs.tree_id
+        })
+        
+    # 2. Adoptions
+    user_adoptions = Adoption.query.filter_by(user_id=user.user_id).all()
+    for adopt in user_adoptions:
+        adopt_time = datetime.combine(adopt.start_date, datetime.min.time())
+        all_activities.append({
+            'type': 'adoption',
+            'title': 'Adopted a Tree',
+            'date': adopt_time,
+            'details': f'Started adoption on {adopt.start_date.strftime("%Y-%m-%d")}',
+            'icon': 'fa-seedling',
+            'tree_id': adopt.tree_id
+        })
+        
+    # 3. Tags
+    user_tags = UserTreeTag.query.filter_by(user_id=user.user_id).all()
+    for tag in user_tags:
+        all_activities.append({
+            'type': 'tag',
+            'title': 'Tagged a Tree',
+            'date': tag.tagged_at,
+            'details': f'Location: {tag.location_name}' if tag.location_name else 'Tagged a tree location',
+            'icon': 'fa-tag',
+            'tree_id': tag.tree_id
+        })
+
+    # Sort
+    if sort_order == 'oldest':
+        all_activities.sort(key=lambda x: x['date'])
+    else:
+        # Default to newest
+        all_activities.sort(key=lambda x: x['date'], reverse=True)
+
+    return render_template('user_activity.html', activities=all_activities, sort_order=sort_order, user=user, current_badge=current_badge)
+
+
+@app.route('/community_feed')
+def community_feed():
+    if not session.get("is_active"):
+        return redirect(url_for('login'))
+
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+
+    sort_order = request.args.get('sort', 'newest')
+    if sort_order not in ('newest', 'oldest'):
+        sort_order = 'newest'
+
+    query = db.session.query(Observation, Observation_type, User).join(
+        Observation_type, Observation.observation_type_id == Observation_type.observation_type_id
+    ).join(
+        User, Observation.user_id == User.user_id
+    ).filter(
+        Observation.user_id != user.user_id
+    )
+
+    if sort_order == 'oldest':
+        query = query.order_by(Observation.observed_time.asc())
+    else:
+        query = query.order_by(Observation.observed_time.desc())
+
+    feed_items = []
+    for obs, o_type, obs_user in query.all():
+        feed_items.append({
+            'title': f'{o_type.observation_category} Report',
+            'date': obs.observed_time,
+            'details': obs.notes,
+            'icon': 'fa-paw' if o_type.observation_category == 'Wildlife' else 'fa-virus-covid',
+            'tree_id': obs.tree_id,
+            'user_name': f'{obs_user.first_name} {obs_user.last_name}',
+            'username': obs_user.username
+        })
+
+    return render_template('community_feed.html', feed_items=feed_items, sort_order=sort_order, user=user)
+
 
 
 @app.route('/observation_details/<obs_type>')
@@ -829,9 +1032,11 @@ def adopt_tree(tree_id):
 
     db.session.add(new_adoption)
     db.session.commit()
+    award_points(user.user_id, POINTS_ADOPTION, f"Adopted Tree #{tree_id}")
 
     # 4. Feedback
     flash("Tree adopted successfully!", "success")
+    flash_points(POINTS_ADOPTION, "Tree adoption")
 
     # 5. Redirect back to filtered explore page
     next_url = request.form.get('next')
@@ -843,6 +1048,7 @@ def add_observation(tree_id):
     user = User.query.get(session.get('user_id'))
     if not user:
         return redirect(url_for('login'))
+    next_url = request.form.get('next')
 
     health_update = request.form.get('health_status')
 
@@ -861,7 +1067,7 @@ def add_observation(tree_id):
 
     if not notes:
         flash("Please provide notes.", 'danger')
-        return redirect(url_for('tree_detail', tree_id=tree_id))
+        return redirect(next_url if next_url else url_for('tree_detail', tree_id=tree_id))
 
     obs_type_obj = Observation_type.query.filter_by(observation_category=obs_type_val).first()
 
@@ -872,7 +1078,7 @@ def add_observation(tree_id):
 
     if obs_type_val == "Disease" and not health_update:
         flash("Please select a health status for health alerts.", "danger")
-        return redirect(url_for('tree_detail', tree_id=tree_id))
+        return redirect(next_url if next_url else url_for('tree_detail', tree_id=tree_id))
 
 
     if obs_type_val == "Disease" and health_update:
@@ -882,7 +1088,16 @@ def add_observation(tree_id):
     image_path = None
     file = request.files.get('photo')
     if file and file.filename:
-        filename = secure_filename(file.filename)
+        if not allowed_file(file.filename):
+            flash("Invalid file type. Only JPG/PNG allowed.", "danger")
+            return redirect(next_url if next_url else url_for('tree_detail', tree_id=tree_id))
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+        if file_size > 5 * 1024 * 1024:
+            flash("Photo must be 5MB or smaller.", "danger")
+            return redirect(next_url if next_url else url_for('tree_detail', tree_id=tree_id))
+        filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
         file_path = f"uploads/trees/{filename}"
         full_path = os.path.join('static', file_path)
         file.save(full_path)
@@ -930,7 +1145,11 @@ def add_observation(tree_id):
             badge_id=starter_badge.badge_id
         ))
 
-    award_points(user.user_id, 10, f"Observation on Tree #{tree_id}")
+    award_points(user.user_id, POINTS_OBSERVATION, f"Observation on Tree #{tree_id}")
+    flash_points(POINTS_OBSERVATION, "Observation added")
+    if image_path:
+        award_points(user.user_id, POINTS_PHOTO, f"Photo Added on Tree #{tree_id}")
+        flash_points(POINTS_PHOTO, "Photo added")
 
 
     db.session.commit()
@@ -940,7 +1159,7 @@ def add_observation(tree_id):
             tree.image_url = image_path
             db.session.commit()
     flash("Observation added to the community feed!", "success")
-    return redirect(url_for('tree_detail', tree_id=tree_id))
+    return redirect(next_url if next_url else url_for('tree_detail', tree_id=tree_id))
 
 @app.route('/profile')
 def profile():
@@ -953,10 +1172,39 @@ def profile():
     .filter(Badge.points_required <= points)\
     .order_by(Badge.points_required.desc())\
     .first()
-    badges = db.session.query(Badge).join(UserBadge).filter(UserBadge.user_id == user.user_id).all()
-    activity = LoyaltyLedger.query.filter_by(user_id=user.user_id).order_by(LoyaltyLedger.ledger_id.desc()).limit(
-        5).all()
-    return render_template("profile.html", user=user, points=points, badges=badges, activity=activity, current_badge=current_badge)
+    next_badge = Badge.query\
+    .filter(Badge.points_required > points)\
+    .order_by(Badge.points_required.asc())\
+    .first()
+    badges = db.session.query(Badge).join(UserBadge).filter(UserBadge.user_id == user.user_id).order_by(Badge.points_required.asc()).all()
+    activity = LoyaltyLedger.query.filter_by(user_id=user.user_id).order_by(LoyaltyLedger.ledger_id.desc()).limit(12).all()
+
+    current_required = current_badge.points_required if current_badge else 0
+    if next_badge:
+        span = max(next_badge.points_required - current_required, 1)
+        progress_pct = int(max(0, min(100, ((points - current_required) / span) * 100)))
+        points_to_next = max(next_badge.points_required - points, 0)
+    else:
+        progress_pct = 100
+        points_to_next = 0
+
+    point_rules = [
+        {"label": "Add observation", "points": POINTS_OBSERVATION, "icon": "fa-solid fa-comments"},
+        {"label": "Add photo", "points": POINTS_PHOTO, "icon": "fa-regular fa-image"},
+        {"label": "Tag name on tree", "points": POINTS_TREE_TAG, "icon": "fa-solid fa-tag"},
+        {"label": "Adopt a tree", "points": POINTS_ADOPTION, "icon": "fa-solid fa-seedling"},
+    ]
+
+    return render_template("profile.html",
+                           user=user,
+                           points=points,
+                           badges=badges,
+                           activity=activity,
+                           current_badge=current_badge,
+                           next_badge=next_badge,
+                           progress_pct=progress_pct,
+                           points_to_next=points_to_next,
+                           point_rules=point_rules)
 
 
 @app.route('/edit_profile', methods=['POST'])
@@ -1368,7 +1616,8 @@ def tag_tree(tree_id):
     db.session.add(new_tag)
 
     # Award points for tagging a tree
-    award_points(user.user_id, 5, f"Tagged Tree #{tree_id}")
+    award_points(user.user_id, POINTS_TREE_TAG, f"Tagged Name on Tree #{tree_id}")
+    flash_points(POINTS_TREE_TAG, "Tree tag")
 
     starter_badge = Badge.query.filter_by(points_required=0).first()
 
@@ -1780,4 +2029,3 @@ if __name__ == "__main__":
                 print("----------PRESTON IS ALREADY ADMIN")
 
     app.run(debug=True)
-
