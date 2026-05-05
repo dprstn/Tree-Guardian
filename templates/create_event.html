@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Event</title>
+    <title>{{ 'Edit Event' if is_edit else 'Create Event' }}</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -128,6 +128,9 @@
             z-index: 9999;
             align-items: center;
             justify-content: center;
+            padding: 12px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         #event-map-modal.open { display: flex; }
 
@@ -136,6 +139,9 @@
             border-radius: 14px;
             padding: 1.2rem;
             width: min(95vw, 600px);
+            max-height: calc(100dvh - 24px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             box-shadow: 0 8px 32px rgba(0,0,0,0.28);
         }
         .event-modal-content h3 {
@@ -144,7 +150,7 @@
             font-size: 1.05rem;
         }
         #event-map {
-            height: 340px;
+            height: clamp(260px, 54dvh, 420px);
             width: 100%;
             border-radius: 10px;
             border: 2px solid #1b5e20;
@@ -313,6 +319,21 @@
         }
         .btn-map-done:hover    { background: #2e7d32; }
         .btn-map-done:disabled { background: #aaa; cursor: not-allowed; }
+        @media (max-width: 560px) {
+            #event-map-modal {
+                align-items: flex-start;
+                padding: 8px;
+            }
+            .event-modal-content {
+                width: 100%;
+                padding: 0.95rem;
+                border-radius: 12px;
+            }
+            #event-map {
+                height: 58dvh;
+                min-height: 300px;
+            }
+        }
     </style>
 </head>
 <body class="explore-body">
@@ -328,6 +349,12 @@
         </a>
         <a href="{{ url_for('events') }}" class="nav-item active">
             <i class="fa-solid fa-bullhorn"></i> Events
+        </a>
+        <a href="{{ url_for('faqs') }}" class="nav-item">
+            <i class="fa-solid fa-circle-question"></i> FAQs
+        </a>
+        <a href="{{ url_for('care_guide_page') }}" class="nav-item">
+            <i class="fa-solid fa-book-open"></i> Care Guide
         </a>
     </div>
     <div class="nav-right-profile">
@@ -357,38 +384,38 @@
       {% endfor %}
     {% endwith %}
 
-    <a href="{{ url_for('events') }}" class="back-link">
-        <i class="fa-solid fa-arrow-left"></i> Back to Events
+    <a href="{{ url_for('event_detail', event_id=event.event_id) if is_edit and event else url_for('events') }}" class="back-link">
+        <i class="fa-solid fa-arrow-left"></i> {{ 'Back to Event' if is_edit else 'Back to Events' }}
     </a>
 
     <div class="create-card">
-        <h2><i class="fa-solid fa-calendar-plus"></i> Create Event</h2>
+        <h2><i class="fa-solid fa-{{ 'pen-to-square' if is_edit else 'calendar-plus' }}"></i> {{ 'Edit Event' if is_edit else 'Create Event' }}</h2>
 
         <form method="POST" enctype="multipart/form-data">
 
             <div class="form-group">
                 <label>Event Title *</label>
-                <input type="text" name="title" placeholder="e.g. Watering the Plants" required>
+                <input type="text" name="title" placeholder="e.g. Watering the Plants" value="{{ event.title if event else '' }}" required>
             </div>
 
             <div class="form-group">
                 <label>Short Description</label>
-                <textarea name="description" placeholder="Brief description shown on the events list…"></textarea>
+                <textarea name="description" placeholder="Brief description shown on the events list...">{{ event.description if event else '' }}</textarea>
             </div>
 
             <div class="form-group">
                 <label>About (detail page)</label>
-                <textarea name="about" placeholder="Full details, what to bring, etc…" style="min-height:120px;"></textarea>
+                <textarea name="about" placeholder="Full details, what to bring, etc..." style="min-height:120px;">{{ event.about if event else '' }}</textarea>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
                     <label>Start Date & Time *</label>
-                    <input type="datetime-local" name="event_date" required>
+                    <input type="datetime-local" id="event_date" name="event_date" min="{{ datetime_min }}" value="{{ event.event_date.strftime('%Y-%m-%dT%H:%M') if event and event.event_date else '' }}" required>
                 </div>
                 <div class="form-group">
                     <label>End Date & Time</label>
-                    <input type="datetime-local" name="end_date">
+                    <input type="datetime-local" id="end_date" name="end_date" min="{{ datetime_min }}" value="{{ event.end_date.strftime('%Y-%m-%dT%H:%M') if event and event.end_date else '' }}">
                 </div>
             </div>
 
@@ -418,7 +445,8 @@
                        name="location_name"
                        class="event-loc-input"
                        placeholder="e.g. Naunton Park, Charlton Kings"
-                       autocomplete="off">
+                       autocomplete="off"
+                       value="{{ event.location_name if event else '' }}">
 
                 <!-- Lat / Lng -->
                 <div class="event-coord-row">
@@ -428,7 +456,8 @@
                                id="event_latitude"
                                name="latitude"
                                class="event-coord-input"
-                               placeholder="51.8985">
+                               placeholder="51.8985"
+                               value="{{ event.latitude if event and event.latitude is not none else '' }}">
                     </div>
                     <div class="event-coord-col">
                         <label for="event_longitude">Longitude (optional)</label>
@@ -436,7 +465,8 @@
                                id="event_longitude"
                                name="longitude"
                                class="event-coord-input"
-                               placeholder="-2.0634">
+                               placeholder="-2.0634"
+                               value="{{ event.longitude if event and event.longitude is not none else '' }}">
                     </div>
                 </div>
 
@@ -460,14 +490,17 @@
             ═══════════════════════════════════════════════════════ -->
 
             <div class="form-group">
-                <label>Event Cover Image</label>
+                <label>{{ 'Replace Event Cover Image' if is_edit else 'Event Cover Image' }}</label>
                 <input type="file" name="event_image" accept=".png,.jpg,.jpeg"
                        onchange="previewImg(this)">
-                <img id="img-preview" class="img-preview" src="" alt="Preview">
+                <img id="img-preview" class="img-preview"
+                     src="{{ url_for('static', filename=event.image_url) if event and event.image_url else '' }}"
+                     alt="Preview"
+                     style="{% if event and event.image_url %}display:block;{% endif %}">
             </div>
 
             <button type="submit" class="btn-submit">
-                <i class="fa-solid fa-calendar-check"></i> Create Event
+                <i class="fa-solid fa-calendar-check"></i> {{ 'Update Event' if is_edit else 'Create Event' }}
             </button>
         </form>
     </div>
@@ -516,6 +549,32 @@ function previewImg(input) {
 /* ══════════════════════════════════════════════════
    MAP PICKER — self-contained, no overlap with add_tree
 ═══════════════════════════════════════════════════════ */
+(function setupEventDateValidation() {
+    const startInput = document.getElementById('event_date');
+    const endInput = document.getElementById('end_date');
+    if (!startInput || !endInput) return;
+
+    const syncEndMin = () => {
+        endInput.min = startInput.value || startInput.min;
+        if (endInput.value && startInput.value && endInput.value <= startInput.value) {
+            endInput.setCustomValidity('End date must be after the start date.');
+        } else {
+            endInput.setCustomValidity('');
+        }
+    };
+
+    startInput.addEventListener('input', () => {
+        if (startInput.value && startInput.min && startInput.value < startInput.min) {
+            startInput.setCustomValidity('Event start date must be in the future.');
+        } else {
+            startInput.setCustomValidity('');
+        }
+        syncEndMin();
+    });
+    endInput.addEventListener('input', syncEndMin);
+    syncEndMin();
+})();
+
 (function () {
     const modal       = document.getElementById('event-map-modal');
     const doneBtn     = document.getElementById('eventMapDoneBtn');
@@ -564,7 +623,13 @@ function previewImg(input) {
             ? [validTrees[0].lat, validTrees[0].lng]
             : [51.8993, -2.0782];
 
-        _map = L.map('event-map', { center: centre, zoom: 15, scrollWheelZoom: true });
+        _map = L.map('event-map', {
+            center: centre,
+            zoom: 15,
+            scrollWheelZoom: true,
+            touchZoom: true,
+            dragging: true
+        });
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
@@ -682,12 +747,22 @@ function previewImg(input) {
             });
             _map.setView([existLat, existLng], 15);
             doneBtn.disabled = false;
+            latInput.classList.add('autofilled');
+            lngInput.classList.add('autofilled');
+            if (locInput.value.trim()) {
+                locInput.classList.add('autofilled');
+                autofillTag.style.display = 'inline-block';
+            }
+            clearBtn.classList.add('show');
+            _updateNearbyPreview(existLat, existLng);
         }
 
         /* ── invalidateSize AFTER everything is built ── */
         setTimeout(() => {
             _map.invalidateSize();
-            if (validTrees.length > 1) {
+            if (_marker) {
+                _map.setView(_marker.getLatLng(), 15);
+            } else if (validTrees.length > 1) {
                 _map.fitBounds(validTrees.map(t => [t.lat, t.lng]), { padding: [40, 40], maxZoom: 17 });
             } else if (validTrees.length === 1) {
                 _map.setView([validTrees[0].lat, validTrees[0].lng], 15);

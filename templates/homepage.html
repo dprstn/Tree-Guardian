@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tree Guardian - Home</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=community-feed-2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=faq-careguide-1">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
 </head>
 
@@ -25,6 +25,12 @@
             <a href="{{ url_for('events') }}" class="nav-item">
               <i class="fa-solid fa-bullhorn"></i> Events
 
+            </a>
+            <a href="{{ url_for('faqs') }}" class="nav-item">
+                <i class="fa-solid fa-circle-question"></i> FAQs
+            </a>
+            <a href="{{ url_for('care_guide_page') }}" class="nav-item">
+                <i class="fa-solid fa-book-open"></i> Care Guide
             </a>
             {% if role.lower() == 'admin' %}
             <a href="{{url_for('add_tree') }}" class="nav-item">
@@ -68,7 +74,7 @@
 
 
         <div class="button-grid">
-            <a href="#" class="c-button gold-variation">ADOPTED TREES • {{ adopted_count }}</a>
+            <a href="{{ url_for('local_trees', mode='adopted') }}" class="c-button gold-variation">ADOPTED TREES • {{ adopted_count }}</a>
             <a href="{{ url_for('local_trees', mode='observe') }}" class="c-button gold-variation">ADD OBSERVATION</a>
             <div class="center-single-button">
                 <a href="{{ url_for('local_trees', mode='adopt') }}" class="c-button gold-variation">

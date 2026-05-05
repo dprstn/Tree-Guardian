@@ -5,19 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Explore Local Trees</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=observation-popup-3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=faq-careguide-1">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
 </head>
-<body class="explore-body">
+<body class="explore-body {{ 'adopted-cards-only' if mode == 'adopted' else '' }}">
 
 <nav class="mobile-nav">
     <div class="nav-center">
         <a href="{{ url_for('homepage') }}" class="nav-item">
             <i class="fa-solid fa-house"></i> Home
         </a>
+        {% if mode != 'adopted' %}
         <a href="{{ url_for('local_trees') }}" class="nav-item active">
             <i class="fa-solid fa-tree"></i> Local Trees
         </a>
+        <a href="{{ url_for('faqs') }}" class="nav-item">
+            <i class="fa-solid fa-circle-question"></i> FAQs
+        </a>
+        <a href="{{ url_for('care_guide_page') }}" class="nav-item">
+            <i class="fa-solid fa-book-open"></i> Care Guide
+        </a>
+        {% endif %}
 
     </div>
 </nav>
@@ -40,6 +48,7 @@
                 </div>
             {% endif %}
         {% endwith %}
+        {% if mode != 'adopted' %}
         <h1 class="explore-header">
             <span>Explore Local Trees</span>
         </h1>
@@ -155,7 +164,9 @@
             </a>
 
         </form>
+        {% endif %}
 
+        {% if mode != 'adopted' %}
         {% if request.args.get('tag') or request.args.getlist('health')|length > 0 or request.args.getlist('status') %}
         <div class="active-filters">
 
@@ -178,7 +189,9 @@
 
         </div>
         {% endif %}
+        {% endif %}
 
+        {% if mode != 'adopted' %}
         {% if all_tags %}
         <div class="tag-expand-row">
             <p style="font-weight:700; margin-bottom:10px; color: #0b422a; font-size: 14px;">Explore by Tags:</p>
@@ -199,7 +212,9 @@
             </div>
         </div>
         {% endif %}
+        {% endif %}
 
+        {% if mode != 'adopted' %}
         {% if session.get('role') == 'admin' %}
         <div class="io-toolbar">
 
@@ -278,7 +293,9 @@
         {% set _ = session.pop('import_feedback', None) %}
         {% endif %}
         {% endif %}
+        {% endif %}
 
+        {% if mode != 'adopted' %}
         <div class="view-toggle">
             <button   id="btn-list" class="view-toggle-btn active"  onclick="switchView('list')">
                 <i class="fa fa-list"></i> List
@@ -290,6 +307,7 @@
         <div id="map-view" style="display:none;">
             <div id="tree-map" style="height:520px; border-radius:12px; border:2.5px solid #0b422a; margin-top:16px;"></div>
         </div>
+        {% endif %}
 
 
 

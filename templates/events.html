@@ -80,6 +80,18 @@
             margin-bottom: 22px;
             align-items: center;
         }
+        .events-sort-select {
+            border: 1.5px solid #1b5e20;
+            color: #0b4f31;
+            background: #fff;
+            border-radius: 999px;
+            padding: 10px 36px 10px 14px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            outline: none;
+            min-width: 150px;
+            cursor: pointer;
+        }
         .search-wrap {
             flex: 1;
             position: relative;
@@ -275,6 +287,12 @@
         }
         .flash-success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
         .flash-danger  { background: #fdecea; color: #b71c1c; border: 1px solid #ef9a9a; }
+        @media (max-width: 560px) {
+            .events-page-header { align-items: flex-start; gap: 12px; }
+            .events-page-header h1 { font-size: 1.35rem; }
+            .search-row { display: grid; grid-template-columns: 1fr auto; }
+            .events-sort-select { grid-column: 1 / -1; width: 100%; }
+        }
     </style>
 </head>
 <body class="explore-body">
@@ -292,6 +310,12 @@
         </a>
         <a href="{{ url_for('events') }}" class="nav-item active">
             <i class="fa-solid fa-bullhorn"></i> Events
+        </a>
+        <a href="{{ url_for('faqs') }}" class="nav-item">
+            <i class="fa-solid fa-circle-question"></i> FAQs
+        </a>
+        <a href="{{ url_for('care_guide_page') }}" class="nav-item">
+            <i class="fa-solid fa-book-open"></i> Care Guide
         </a>
     </div>
     <div class="nav-right-profile">
@@ -337,11 +361,11 @@
 
     <!-- ── Tabs ── -->
     <div class="events-tabs">
-        <a href="{{ url_for('events', tab='upcoming', search=search) }}"
+        <a href="{{ url_for('events', tab='upcoming', search=search, sort=sort_order) }}"
            class="events-tab {% if tab == 'upcoming' %}active{% endif %}">
             Upcoming Events
         </a>
-        <a href="{{ url_for('events', tab='joined', search=search) }}"
+        <a href="{{ url_for('events', tab='joined', search=search, sort=sort_order) }}"
            class="events-tab {% if tab == 'joined' %}active{% endif %}">
             My Joined Events
         </a>
@@ -354,6 +378,10 @@
             <i class="fa-solid fa-magnifying-glass"></i>
             <input type="text" name="search" placeholder="Search events…" value="{{ search }}">
         </div>
+        <select name="sort" class="events-sort-select" onchange="this.form.submit()" aria-label="Sort events">
+            <option value="oldest" {% if sort_order == 'oldest' %}selected{% endif %}>Oldest First</option>
+            <option value="newest" {% if sort_order == 'newest' %}selected{% endif %}>Newest First</option>
+        </select>
         <button type="submit" class="btn-filter" title="Search">
             <i class="fa-solid fa-sliders"></i>
         </button>

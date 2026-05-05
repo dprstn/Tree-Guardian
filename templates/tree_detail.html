@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ species.species_name }} - Details</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=observation-popup-3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=faq-careguide-1">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -922,6 +922,12 @@
 
             <hr style="border:none;border-top:1px solid #eee;margin:4px 0 0;">
 
+            <a href="{{ url_for('care_guide_page', tree_id=tree.tree_id) }}"
+               class="care-guide-link tree-detail-care-guide">
+                Care Guide
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            </a>
+
             <div class="tabs-bar" id="tabs-bar">
                 <button class="tab-btn active" onclick="switchTab('observations', this)">
                     <i class="fa fa-comments"></i> Observations
@@ -1219,9 +1225,14 @@
                     <tr><td>Latitude</td><td>{{ tree.latitude }}</td></tr>
                     <tr><td>Longitude</td><td>{{ tree.longitude }}</td></tr>
                     {% if tree.notes %}
-                    <tr><td>Notes</td><td>{{ tree.notes }}</td></tr>
+                    <tr><td>About Tree</td><td>{{ tree.notes }}</td></tr>
                     {% endif %}
                 </table>
+                <a href="{{ url_for('care_guide_page', tree_id=tree.tree_id) }}"
+                   class="care-guide-link tree-about-care-guide">
+                    Care Guide
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </a>
             </div>
 
         <!-- ── ACTIVITY PANEL ── -->

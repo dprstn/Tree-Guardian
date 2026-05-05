@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile - Tree Guardian</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=profile-showcase-2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=faq-careguide-1">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
 </head>
 <body class="profile-showcase-body">
@@ -20,6 +20,12 @@
         </a>
         <a href="{{ url_for('events') }}" class="nav-item">
             <i class="fa-solid fa-bullhorn"></i> Events
+        </a>
+        <a href="{{ url_for('faqs') }}" class="nav-item">
+            <i class="fa-solid fa-circle-question"></i> FAQs
+        </a>
+        <a href="{{ url_for('care_guide_page') }}" class="nav-item">
+            <i class="fa-solid fa-book-open"></i> Care Guide
         </a>
         {% if user.role and user.role.lower() == 'admin' %}
         <a href="{{ url_for('add_tree') }}" class="nav-item">

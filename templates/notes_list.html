@@ -1,27 +1,151 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Tree Guardian</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=observation-tabs-1">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
 </head>
-<body style="background-color: #f4fdf4; padding: 30px; font-family: sans-serif;">
-    <a href="{{ url_for('homepage') }}" style="color: #042c1b; font-weight: bold; text-decoration: none;">← Back to Dashboard</a>
 
-    <h1 style="color: #042c1b; margin-top: 20px;">{{ title }} for your Trees</h1>
-    <hr>
+<body class="homepage-body activity-page-body observation-tabs-body">
+    <nav class="mobile-nav">
+        <div style="flex: 1;">
+            <a href="{{ url_for('homepage') }}" class="nav-item" style="display: inline-block; padding-left: 20px;">
+                <i class="fa-solid fa-arrow-left"></i> Back
+            </a>
+        </div>
+        <div class="nav-center">
+            <a href="{{ url_for('homepage') }}" class="nav-item">
+                <i class="fa-solid fa-house"></i> Home
+            </a>
+            <a href="{{ url_for('local_trees') }}" class="nav-item">
+                <i class="fa-solid fa-tree"></i> Local Trees
+            </a>
+            <a href="{{ url_for('faqs') }}" class="nav-item">
+                <i class="fa-solid fa-circle-question"></i> FAQs
+            </a>
+            <a href="{{ url_for('care_guide_page') }}" class="nav-item">
+                <i class="fa-solid fa-book-open"></i> Care Guide
+            </a>
+        </div>
+        <div class="nav-right-profile">
+            <div class="profile-dropdown">
+                <div class="profile-trigger orange-theme">
+                    {% if user.profile_pic and user.profile_pic != 'default_user.png' %}
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_pic) }}" class="nav-avatar">
+                    {% else %}
+                        <i class="fa-solid fa-user"></i>
+                    {% endif %}
+                    <span class="user-name-text">{{ user.username }}</span>
+                    <i class="fa fa-chevron-down"></i>
+                </div>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('profile') }}"><i class="fa-solid fa-circle-user"></i> Profile</a>
+                    <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+                </div>
+            </div>
+        </div>
+    </nav>
 
-    {% if notes %}
-        {% for n in notes %}
-        <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 6px solid #fbb034; shadow: 0 4px 6px rgba(0,0,0,0.05);">
-            <p style="margin: 0; color: #666; font-size: 0.9em;">Tree #{{ n.tree_id }}</p>
-            <p style="font-size: 1.1em; margin: 10px 0;"><strong>Note:</strong> {{ n.notes }}</p>
-            <p style="margin: 0; color: #999; font-size: 0.8em;">Observed on: {{ n.observed_time.strftime('%d %b %Y') }}</p>
+    <div class="main-content activity-page-content observation-tabs-page">
+        <h1 class="welcome-header activity-page-title">{{ title }}</h1>
+
+        <div class="activity-page-toolbar observation-tabs-toolbar">
+            <p>Showing observations on your adopted trees</p>
+
+            <form action="{{ url_for('observation_details', obs_type=obs_type) }}" method="GET" class="sort-form">
+                <select name="sort" onchange="this.form.submit()" class="activity-sort-select">
+                    <option value="newest" {% if sort_order == 'newest' %}selected{% endif %}>Newest First</option>
+                    <option value="oldest" {% if sort_order == 'oldest' %}selected{% endif %}>Oldest First</option>
+                </select>
+            </form>
         </div>
-        {% endfor %}
-    {% else %}
-        <div style="text-align: center; margin-top: 50px; color: #888;">
-            <p>There are no notes recorded for your adopted trees in this category yet.</p>
+
+        <div class="observation-tabs-switch" role="tablist" aria-label="Observation tabs">
+            <button type="button" class="observation-tab-btn active" data-tab-target="mine">
+                My observations on adopted trees
+                <span>{{ my_observations|length }}</span>
+            </button>
+            <button type="button" class="observation-tab-btn" data-tab-target="community">
+                Community observations
+                <span>{{ community_observations|length }}</span>
+            </button>
         </div>
-    {% endif %}
+
+        <section class="observation-tab-panel active" id="panel-mine">
+            <div class="activity-feed activity-page-feed full-page-feed">
+                {% if my_observations %}
+                    {% for obs, o_type, tree, species, obs_user in my_observations %}
+                    <div class="activity-card dashboard-activity-card activity-page-card">
+                        <div class="activity-icon-container">
+                            <i class="fa-solid {{ 'fa-paw' if o_type.observation_category == 'Wildlife' else 'fa-virus-covid' }}"></i>
+                        </div>
+                        <div class="activity-details">
+                            <h4 class="activity-title">{{ o_type.observation_category }} Report</h4>
+                            <p class="activity-meta">{{ species.species_name }} on Tree #{{ tree.tree_id }}</p>
+                            <p class="activity-meta">{{ obs.notes }}</p>
+                            <span class="activity-date">{{ obs.observed_time.strftime('%B %d, %Y at %H:%M') }}</span>
+                        </div>
+                        <div class="activity-action">
+                            <a href="{{ url_for('tree_detail', tree_id=tree.tree_id) }}" class="activity-link-btn">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="activity-empty-state">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <p>You have not added observations on your adopted trees yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="observation-tab-panel" id="panel-community">
+            <div class="activity-feed activity-page-feed full-page-feed">
+                {% if community_observations %}
+                    {% for obs, o_type, tree, species, obs_user in community_observations %}
+                    <div class="activity-card dashboard-activity-card activity-page-card">
+                        <div class="activity-icon-container">
+                            <i class="fa-solid {{ 'fa-paw' if o_type.observation_category == 'Wildlife' else 'fa-virus-covid' }}"></i>
+                        </div>
+                        <div class="activity-details">
+                            <h4 class="activity-title">{{ o_type.observation_category }} Report</h4>
+                            <p class="activity-meta">{{ obs_user.first_name }} {{ obs_user.last_name }} @{{ obs_user.username }} on Tree #{{ tree.tree_id }}</p>
+                            <p class="activity-meta">{{ obs.notes }}</p>
+                            <span class="activity-date">{{ obs.observed_time.strftime('%B %d, %Y at %H:%M') }}</span>
+                        </div>
+                        <div class="activity-action">
+                            <a href="{{ url_for('tree_detail', tree_id=tree.tree_id) }}" class="activity-link-btn">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="activity-empty-state">
+                        <i class="fa-solid fa-seedling"></i>
+                        <p>No community observations on your adopted trees yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <div class="landscape-container activity-page-landscape"></div>
+
+    <script>
+        document.querySelectorAll('.observation-tab-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                const target = button.dataset.tabTarget;
+                document.querySelectorAll('.observation-tab-btn').forEach((tab) => tab.classList.remove('active'));
+                document.querySelectorAll('.observation-tab-panel').forEach((panel) => panel.classList.remove('active'));
+                button.classList.add('active');
+                document.getElementById(`panel-${target}`).classList.add('active');
+            });
+        });
+    </script>
 </body>
 </html>

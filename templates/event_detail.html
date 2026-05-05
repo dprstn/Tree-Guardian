@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ event.title }}</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
@@ -255,6 +256,80 @@
         }
 
         /* ── Comments section ── */
+        .btn-admin-edit {
+            background: #fff;
+            color: #0b4f31;
+            border: 1.5px solid #0b4f31;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .btn-admin-edit:hover { background: #eef7f1; }
+        .nearby-card {
+            border: 1.5px solid #1b5e20;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 10px 0 16px;
+            background: #fff;
+        }
+        .nearby-card-header {
+            background: #1b5e20;
+            color: #fbb034;
+            font-size: 0.88rem;
+            font-weight: 800;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nearby-card-list {
+            padding: 8px 12px;
+            max-height: 170px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .nearby-card-row {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 7px 0;
+            border-bottom: 1px solid #eeeeee;
+            font-size: 0.9rem;
+            color: #333;
+        }
+        .nearby-card-row:last-child { border-bottom: none; }
+        .nearby-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+        .nearby-dot.healthy { background: #43a047; }
+        .nearby-dot.needs { background: #fb8c00; }
+        .nearby-dot.critical { background: #d32f2f; }
+        .nearby-distance { margin-left: auto; color: #777; font-size: 0.82rem; white-space: nowrap; }
+        .event-detail-map {
+            height: clamp(250px, 46dvh, 360px);
+            border-radius: 12px;
+            border: 1.5px solid #cfe4d7;
+            overflow: hidden;
+            margin-bottom: 22px;
+            background: #eef7f1;
+        }
+        .event-detail-map .leaflet-container,
+        .event-detail-map {
+            touch-action: pan-x pan-y;
+        }
+        .event-map-popup { font-family: inherit; min-width: 150px; }
+        .event-map-popup-title { font-weight: 800; color: #0b4f31; margin-bottom: 4px; }
+        @media (max-width: 560px) {
+            .admin-bar { flex-direction: column; }
+            .btn-admin-edit,
+            .btn-admin-delete { width: 100%; justify-content: center; }
+            .event-detail-map { height: 54dvh; min-height: 300px; }
+            .nearby-card-header { font-size: 0.8rem; }
+        }
+
         #comments { scroll-margin-top: 80px; }
         .comments-header {
             font-size: 1.05rem;
@@ -407,6 +482,12 @@
         <a href="{{ url_for('events') }}" class="nav-item active">
             <i class="fa-solid fa-bullhorn"></i> Events
         </a>
+        <a href="{{ url_for('faqs') }}" class="nav-item">
+            <i class="fa-solid fa-circle-question"></i> FAQs
+        </a>
+        <a href="{{ url_for('care_guide_page') }}" class="nav-item">
+            <i class="fa-solid fa-book-open"></i> Care Guide
+        </a>
     </div>
     <div class="nav-right-profile">
         <div class="profile-dropdown">
@@ -486,7 +567,7 @@
 
     <!-- ── Attendee avatars ── -->
 
-    {% if total_going > 0 %}
+    {% if total_going > 0 or total_interested > 0 %}
     <div class="detail-attendee-row">
         {% for att in going_attendees %}
         <img src="{{ url_for('static', filename='uploads/profiles/' + att.user.profile_pic) }}"
@@ -496,7 +577,7 @@
         {% if total_going > going_attendees|length %}
         <div class="det-plus-badge">+{{ total_going - going_attendees|length }}</div>
         {% endif %}
-        <span class="det-going-text">{{ total_going }} going</span>
+        <span class="det-going-text">{{ total_going }} going · {{ total_interested }} interested</span>
     </div>
     {% endif %}
 
@@ -508,7 +589,7 @@
                     class="btn-join {% if user_status == 'going' %}active-join{% endif %}"
                     style="width:100%;">
                 <i class="fa-solid fa-{% if user_status == 'going' %}check{% else %}user-plus{% endif %}"></i>
-                {% if user_status == 'going' %}Going ✓{% else %}Join Event{% endif %}
+                {% if user_status == 'going' %}Leave Event{% else %}Join Event{% endif %}
             </button>
         </form>
         <form method="POST" action="{{ url_for('attend_event', event_id=event.event_id) }}" style="flex:1;">
@@ -517,7 +598,7 @@
                     class="btn-interested {% if user_status == 'interested' %}active-interested{% endif %}"
                     style="width:100%;">
                 <i class="fa-{% if user_status == 'interested' %}solid{% else %}regular{% endif %} fa-heart"></i>
-                {% if user_status == 'interested' %}Interested ✓{% else %}Interested{% endif %}
+                {% if user_status == 'interested' %}Remove Interest{% else %}Interested{% endif %}
             </button>
         </form>
     </div>
@@ -525,6 +606,9 @@
     <!-- ── Admin controls ── -->
     {% if current_user and current_user.role == 'admin' %}
     <div class="admin-bar">
+        <a href="{{ url_for('edit_event', event_id=event.event_id) }}" class="btn-admin-edit">
+            <i class="fa-solid fa-pen-to-square"></i> Edit Event
+        </a>
         <form method="POST" action="{{ url_for('delete_event', event_id=event.event_id) }}"
               onsubmit="return confirm('Delete this event?');">
             <button type="submit" class="btn-admin-delete">
@@ -547,6 +631,31 @@
     {% endif %}
 
     <!-- ── Organised by ── -->
+    {% if event.latitude is not none and event.longitude is not none %}
+    <div class="detail-section-title">Trees close by</div>
+    <div class="nearby-card">
+        <div class="nearby-card-header">
+            <i class="fa-solid fa-tree"></i>
+            {{ nearby_trees|length }} trees within 1 km of this event
+        </div>
+        <div class="nearby-card-list">
+            {% for entry in nearby_trees %}
+            {% set dot_class = 'healthy' if entry.tree.health_status == 'Healthy' else ('needs' if entry.tree.health_status == 'Needs Attention' else 'critical') %}
+            <a href="{{ url_for('tree_detail', tree_id=entry.tree.tree_id) }}" class="nearby-card-row" style="text-decoration:none;">
+                <span class="nearby-dot {{ dot_class }}"></span>
+                <span>{{ entry.species }} #{{ entry.tree.tree_id }}</span>
+                <span class="nearby-distance">{{ entry.distance_m }} m</span>
+            </a>
+            {% else %}
+            <div class="nearby-card-row">
+                <span>No trees recorded within 1 km yet.</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div id="eventDetailMap" class="event-detail-map"></div>
+    {% endif %}
+
     {% if creator %}
     <div class="detail-section-title">Organised by</div>
 
@@ -622,8 +731,9 @@
                         {{ user_badges[-1].badge.name }}
                     </span>
                     {% endif %}
-                    <span class="comment-time">
+                    <span class="comment-time" title="{{ comment.created_at.strftime('%d %b %Y %H:%M') }}">
                         {% set diff = (now - comment.created_at).total_seconds()|int if now is defined else 0 %}
+                        {% if diff < 0 %}{% set diff = 0 %}{% endif %}
                         {% if diff < 3600 %}{{ (diff // 60) }}m ago
                         {% elif diff < 86400 %}{{ (diff // 3600) }}h ago
                         {% else %}{{ comment.created_at.strftime('%d %b') }}{% endif %}
@@ -655,7 +765,69 @@
 
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+const eventLocation = {
+    lat: {{ event.latitude | tojson }},
+    lng: {{ event.longitude | tojson }},
+    title: {{ event.title | tojson }},
+    locationName: {{ event.location_name | tojson }}
+};
+const nearbyTreesForMap = {{ nearby_tree_map_data | tojson }};
+
+function initEventDetailMap() {
+    const mapEl = document.getElementById('eventDetailMap');
+    if (!mapEl || eventLocation.lat === null || eventLocation.lng === null || typeof L === 'undefined') return;
+
+    const map = L.map('eventDetailMap', {
+        center: [eventLocation.lat, eventLocation.lng],
+        zoom: 15,
+        scrollWheelZoom: false,
+        touchZoom: true,
+        dragging: true
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+    }).addTo(map);
+
+    const bounds = [[eventLocation.lat, eventLocation.lng]];
+    const eventIcon = L.divIcon({
+        className: '',
+        html: `<div style="width:34px;height:34px;background:#0b4f31;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-calendar-days" style="color:#fff;font-size:13px;transform:rotate(45deg);"></i></div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 34],
+        popupAnchor: [0, -32]
+    });
+    L.marker([eventLocation.lat, eventLocation.lng], { icon: eventIcon })
+        .addTo(map)
+        .bindPopup(`<div class="event-map-popup"><div class="event-map-popup-title">${eventLocation.title}</div><div>${eventLocation.locationName || 'Event location'}</div></div>`);
+
+    nearbyTreesForMap.forEach(tree => {
+        const color = tree.health === 'Healthy' ? '#43a047' : tree.health === 'Needs Attention' ? '#fb8c00' : '#d32f2f';
+        const icon = L.divIcon({
+            className: '',
+            html: `<div style="width:25px;height:25px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 2px 7px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;"><i class="fa-solid fa-tree"></i></div>`,
+            iconSize: [25, 25],
+            iconAnchor: [12, 12],
+            popupAnchor: [0, -14]
+        });
+        L.marker([tree.lat, tree.lng], { icon })
+            .addTo(map)
+            .bindPopup(`<div class="event-map-popup"><div class="event-map-popup-title">${tree.species} #${tree.id}</div><div>${tree.distance_m} m away</div><a href="${tree.detail_url}" style="color:#0b4f31;font-weight:700;">View tree</a></div>`);
+        bounds.push([tree.lat, tree.lng]);
+    });
+
+    if (bounds.length > 1) {
+        map.fitBounds(bounds, { padding: [28, 28], maxZoom: 16 });
+    }
+    setTimeout(() => map.invalidateSize(), 200);
+}
+
+document.addEventListener('DOMContentLoaded', initEventDetailMap);
+
 function replyTo(name) {
     const input = document.querySelector('.comment-input-wrap input');
     if (input) {
