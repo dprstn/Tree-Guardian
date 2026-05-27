@@ -300,7 +300,7 @@
 
 
 <nav class="mobile-nav">
-    <div style="flex: 1;"></div>
+    <div class="nav-spacer"></div>
     <div class="nav-center">
         <a href="{{ url_for('homepage') }}" class="nav-item">
             <i class="fa-solid fa-house"></i> Home
@@ -337,6 +337,7 @@
         </div>
     </div>
 </nav>
+<a href="{{ url_for('faqs') }}" class="mobile-faq-footer-link">FAQs</a>
 
 <div class="events-page-wrap">
 
@@ -395,7 +396,7 @@
 
                 <!-- Image or placeholder -->
                 {% if event.image_url %}
-                <div style="position:relative; width:140px; min-height:140px; flex-shrink:0;">
+                <div class="event-card-media-wrap">
                     <span class="event-status-badge">UPCOMING</span>
                     <img src="{{ url_for('static', filename=event.image_url) }}"
                          class="event-card-img" alt="{{ event.title }}"

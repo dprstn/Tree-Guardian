@@ -320,6 +320,13 @@
         .btn-map-done:hover    { background: #2e7d32; }
         .btn-map-done:disabled { background: #aaa; cursor: not-allowed; }
         @media (max-width: 560px) {
+            .form-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .form-row .form-group {
+                min-width: 0;
+            }
             #event-map-modal {
                 align-items: flex-start;
                 padding: 8px;
@@ -339,7 +346,7 @@
 <body class="explore-body">
 
 <nav class="mobile-nav">
-    <div style="flex: 1;"></div>
+    <div class="nav-spacer"></div>
     <div class="nav-center">
         <a href="{{ url_for('homepage') }}" class="nav-item">
             <i class="fa-solid fa-house"></i> Home
@@ -376,6 +383,7 @@
         </div>
     </div>
 </nav>
+<a href="{{ url_for('faqs') }}" class="mobile-faq-footer-link">FAQs</a>
 
 <div class="create-wrap">
     {% with messages = get_flashed_messages(with_categories=true) %}

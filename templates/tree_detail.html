@@ -287,15 +287,12 @@
         .about-table td:first-child { color: #888; width: 40%; }
         .about-table td:last-child { font-weight: 600; color: #0b422a; }
 
-        /* ── FLOATING BOTTOM BUTTON ── */
+        /* ── BOTTOM PAGE BUTTON ── */
         .float-tag-btn-wrap {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 200;
-            background: linear-gradient(to top, rgba(255,255,255,1) 60%, rgba(255,255,255,0));
-            padding: 18px 20px 28px;
+            position: static;
+            background: transparent;
+            padding: 18px 20px 0;
+            margin: 10px 0 0;
             display: flex;
             justify-content: center;
         }
@@ -826,6 +823,27 @@
 
 </head>
 <body class="explore-body">
+
+    <nav class="mobile-nav">
+        <div class="nav-center">
+            <a href="{{ url_for('homepage') }}" class="nav-item">
+                <i class="fa-solid fa-house"></i> Home
+            </a>
+            <a href="{{ url_for('local_trees') }}" class="nav-item active">
+                <i class="fa-solid fa-tree"></i> Local Trees
+            </a>
+            <a href="{{ url_for('events') }}" class="nav-item">
+                <i class="fa-solid fa-bullhorn"></i> Events
+            </a>
+            <a href="{{ url_for('faqs') }}" class="nav-item">
+                <i class="fa-solid fa-circle-question"></i> FAQs
+            </a>
+            <a href="{{ url_for('care_guide_page') }}" class="nav-item">
+                <i class="fa-solid fa-book-open"></i> Care Guide
+            </a>
+        </div>
+    </nav>
+    <a href="{{ url_for('faqs') }}" class="mobile-faq-footer-link">FAQs</a>
 
     <div class="details-container">
         <!-- Top Image -->

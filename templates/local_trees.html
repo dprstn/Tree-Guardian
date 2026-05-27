@@ -29,6 +29,7 @@
 
     </div>
 </nav>
+<a href="{{ url_for('faqs') }}" class="mobile-faq-footer-link">FAQs</a>
     <div class="explorer-container">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -157,11 +158,12 @@
 
             </div>
 
-            <button type="submit" class="apply-btn">Apply Filters</button>
-            <a href="javascript:void(0)" onclick="clearFilters()" class="btn-clear">
-                <i class="fa fa-rotate-left"></i> Clear Filters
-
-            </a>
+            <div class="filter-actions-row">
+                <button type="submit" class="apply-btn">Apply Filters</button>
+                <a href="javascript:void(0)" onclick="clearFilters()" class="btn-clear">
+                    <i class="fa fa-rotate-left"></i> Clear Filters
+                </a>
+            </div>
 
         </form>
         {% endif %}
@@ -305,7 +307,7 @@
             </button>
         </div>
         <div id="map-view" style="display:none;">
-            <div id="tree-map" style="height:520px; border-radius:12px; border:2.5px solid #0b422a; margin-top:16px;"></div>
+            <div id="tree-map" style="border-radius:12px; border:2.5px solid #0b422a; margin-top:16px;"></div>
         </div>
         {% endif %}
 
