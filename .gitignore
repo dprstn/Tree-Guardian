@@ -1,0 +1,62 @@
+.venv/pyvenv.cfg
+.venv/Include/site/python3.13/greenlet/greenlet.h
+.venv/Scripts/activate
+.venv/Scripts/activate.bat
+.venv/Scripts/activate.fish
+.venv/Scripts/Activate.ps1
+.venv/Scripts/deactivate.bat
+.venv/Scripts/flask.exe
+.venv/Scripts/pip.exe
+.venv/Scripts/pip3.13.exe
+.venv/Scripts/pip3.exe
+.venv/Scripts/python.exe
+.venv/Scripts/pythonw.exe
+.venv/Scripts/qr.exe
+__pycache__/App.cpython-312.pyc
+__pycache__/database.cpython-312.pyc
+__pycache__/database.cpython-313.pyc
+__pycache__/testing.cpython-312.pyc
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Flask
+instance/
+.webassets-cache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.flaskenv
