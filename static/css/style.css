@@ -247,6 +247,22 @@ body, html {
     padding: 0;
 }
 
+.register-auth-body {
+    margin: 0;
+    background: #f8f9fa;
+    overflow-x: hidden;
+}
+
+.register-auth-body .split-screen-container {
+    width: 100%;
+    min-height: 100vh;
+    background: #f8f9fa;
+}
+
+.register-auth-body .form-section {
+    background: #f8f9fa;
+}
+
 
 .info-section {
     flex: 1.2;
@@ -6008,19 +6024,38 @@ body.observation-modal-open {
 
 @media (max-width: 900px) {
     .split-screen-container {
-        flex-direction: column;
-        min-height: auto;
+        flex-direction: row;
+        min-height: 100vh;
     }
 
-    .info-section,
-    .form-section {
+    .register-auth-body .split-screen-container {
+        display: block;
         width: 100%;
-        padding: 20px;
+    }
+
+    .info-section {
+        display: none;
+    }
+
+    .register-auth-body .form-section {
+        flex: 1 1 100% !important;
+        width: 100%;
+        max-width: none !important;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        background: #f8f9fa;
     }
 
     .register-panel {
-        max-width: 100% !important;
-        padding: 22px !important;
+        width: 100% !important;
+        max-width: 420px !important;
+        margin: 0 !important;
+        padding: 24px !important;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
     }
 }
 
