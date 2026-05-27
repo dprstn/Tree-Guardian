@@ -60,3 +60,7 @@ Thumbs.db
 # Environment
 .env
 .flaskenv
+*TreeGuardian.db
+instance/TreeGuardian.db
+static/uploads/trees/9b6869c46e5e450ba0b4d34962aaa6d6_tree.jpg
+
