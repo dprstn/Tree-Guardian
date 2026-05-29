@@ -456,16 +456,16 @@
                         <!-- Right: QR Code -->
                         <div class="qr-container">
                             <p class="tag-id">TAG #{{ tree.tree_id }}</p>
-                            <img src="{{ url_for('generate_qr', tree_id=tree.tree_id) }}" class="qr-img">
+                            <img src="{{ url_for('static', filename='qr/tree_' ~ tree.tree_id ~ '.png') }}" class="qr-img">
                             <div class="qr-actions">
-                                <a href="{{ url_for('generate_qr', tree_id=tree.tree_id) }}"
+                                <a href="{{ url_for('static', filename='qr/tree_' ~ tree.tree_id ~ '.png') }}"
                                    download="tree_{{ tree.tree_id }}_qr.png"
                                    class="qr-icon-btn"
                                    title="Download QR">
                                     <i class="fa fa-download"></i>
                                 </a>
 
-                                    <button onclick="printQR('{{ url_for('generate_qr', tree_id=tree.tree_id) }}')"
+                                    <button onclick="printQR('{{ url_for('static', filename='qr/tree_' ~ tree.tree_id ~ '.png') }}')"
                                             class="qr-icon-btn"
                                             title="Print QR">
                                         <i class="fa fa-print"></i>
@@ -668,7 +668,7 @@ const TREE_DATA = [
         last_obs:   {% if last_observed %}{{ last_observed.isoformat() | tojson }}{% else %}null{% endif %},
         image:      {{ (tree.image_url.split('static/')[-1] if tree.image_url else '') | tojson }},
         detail_url: {{ url_for('tree_detail', tree_id=tree.tree_id) | tojson }},
-        qr_url:     {{ url_for('generate_qr', tree_id=tree.tree_id) | tojson }}
+        qr_url:     {{ url_for('static', filename='qr/tree_' ~ tree.tree_id ~ '.png') | tojson }}
     }{% if not loop.last %},{% endif %}
     {% endfor %}
 ];

@@ -1560,7 +1560,7 @@
             <p class="success-sub">Thank you for being part of our community.</p>
 
             <div class="qr-box">
-                <img id="success-qr-img" src="/qr/{{ tree.tree_id }}" alt="QR Code">
+                <img id="success-qr-img" src="{{ url_for('static', filename='qr/tree_' ~ tree.tree_id ~ '.png') }}" alt="QR Code">
             </div>
 
             <div class="recorded-as">
@@ -1772,7 +1772,7 @@ function submitTag(e) {
 function viewTagQR(tagId, fullname, handle, date, time, badge, badgeIcon, profilePic) {
 
     // QR
-    document.getElementById('view-qr-img').src = '/qr/{{ tree.tree_id }}';
+    document.getElementById('view-qr-img').src = '{{ url_for('static', filename='qr/tree_' ~ tree.tree_id ~ '.png') }}';
 
     // Name + handle + date
     document.getElementById('vqr-name').textContent   = fullname;
@@ -1808,7 +1808,7 @@ function overlayClose(e, id) {
 // ── QR DOWNLOAD ──
 // ── QR DOWNLOAD — renders full card to canvas then downloads as PNG ──
 function downloadQR() {
-    const qrSrc    = '/qr/{{ tree.tree_id }}';
+    const qrSrc    = '{{ url_for('static', filename='qr/tree_' ~ tree.tree_id ~ '.png') }}';
     const fullname = '{{ user.first_name }} {{ user.last_name }}';
     const handle   = '@{{ user.username }}';
     const datetime = '{{ now.strftime("%d %b %Y • %I:%M %p") }}';
@@ -2000,7 +2000,7 @@ function printQR() {
                   : '';
 
     // Collect all the data already rendered in the modal by Flask/Jinja
-    const qrSrc    = '/qr/{{ tree.tree_id }}';
+    const qrSrc    = '{{ url_for('static', filename='qr/tree_' ~ tree.tree_id ~ '.png') }}';
     const fullname = '{{ user.first_name }} {{ user.last_name }}';
     const handle   = '@{{ user.username }}';
     const datetime = '{{ now.strftime("%d %b %Y • %I:%M %p") }}';
