@@ -53,11 +53,14 @@ def static_disk_path(*parts):
 app.config['UPLOAD_FOLDER'] = static_disk_path('uploads', 'trees')
 app.config['PROFILE_UPLOAD_FOLDER'] = static_disk_path('uploads', 'profiles')
 app.config['EVENT_UPLOAD_FOLDER'] = static_disk_path('uploads', 'events')
+app.config['QR_FOLDER'] = static_disk_path('qr')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['PROFILE_UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['EVENT_UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['QR_FOLDER'], exist_ok=True)
 
 BASE_URL = os.environ.get("BASE_URL", "https://127.0.0.1:5000")
+QR_PUBLIC_BASE_URL = os.environ.get("QR_PUBLIC_BASE_URL", "https://quietgardeners.pythonanywhere.com").rstrip('/')
 
 REQUIRED_COLUMNS = {
     'species_name', 'latitude', 'longitude',
@@ -987,7 +990,7 @@ def add_tree():
 @app.route('/qr/<int:tree_id>')
 
 def generate_qr(tree_id):
-    url = f"{BASE_URL}/tree/{tree_id}"
+    url = f"{QR_PUBLIC_BASE_URL}/local_trees?tree_id={tree_id}"
 
     qr = qrcode.QRCode(box_size=10, border=2)
     qr.add_data(url)
@@ -995,10 +998,11 @@ def generate_qr(tree_id):
 
     img = qr.make_image(fill_color='#0b422a', back_color="white") # dark green plus white background
 
-    img_io = io.BytesIO()
-    img.save(img_io, 'PNG')
-    img_io.seek(0)
-    return send_file(img_io, mimetype="image/png")
+    qr_filename = f"tree_{tree_id}.png"
+    qr_path = os.path.join(app.config['QR_FOLDER'], qr_filename)
+    img.save(qr_path, 'PNG')
+
+    return send_file(qr_path, mimetype="image/png")
 
 @app.route('/local_trees')
 def local_trees():
