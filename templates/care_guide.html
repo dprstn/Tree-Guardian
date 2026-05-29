@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Care Guide</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=faq-careguide-1">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --forest: #0b422a;
+            --leaf: #00543a;
+            --mist: #eef5f1;
+            --line: #d6e5dc;
+            --gold: #f7b733;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            min-height: 100%;
+            margin: 0;
+            background: var(--mist);
+            color: var(--forest);
+            font-family: Arial, sans-serif;
+        }
+
+        .guide-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px clamp(14px, 4vw, 34px);
+            background: #ffffff;
+            border-bottom: 1px solid var(--line);
+            box-shadow: 0 8px 24px rgba(11, 66, 42, 0.08);
+        }
+
+        .guide-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .guide-title-icon {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            border-radius: 50%;
+            background: #e2f0e9;
+            color: var(--leaf);
+            font-weight: 900;
+        }
+
+        .guide-title h1 {
+            margin: 0;
+            font-size: clamp(18px, 3vw, 24px);
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .guide-title p {
+            margin: 3px 0 0;
+            color: #587066;
+            font-size: 13px;
+        }
+
+        .guide-download {
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 20px;
+            border-radius: 999px;
+            background: var(--leaf);
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 800;
+            white-space: nowrap;
+            box-shadow: 0 8px 20px rgba(0, 84, 58, 0.16);
+        }
+
+        .guide-shell {
+            width: min(100% - 28px, 1180px);
+            margin: 24px auto 48px;
+        }
+
+        .guide-frame-wrap {
+            height: calc(100vh - 132px);
+            min-height: 520px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: #ffffff;
+            box-shadow: 0 18px 40px rgba(15, 46, 31, 0.12);
+        }
+
+        .guide-frame {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+            background: #ffffff;
+        }
+
+        .guide-fallback {
+            margin-top: 14px;
+            padding: 16px 18px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: #ffffff;
+            color: #40564d;
+            font-size: 14px;
+        }
+
+        @media (max-width: 640px) {
+            .guide-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .guide-download {
+                width: 100%;
+            }
+
+            .guide-shell {
+                width: min(100% - 18px, 640px);
+                margin-top: 12px;
+            }
+
+            .guide-frame-wrap {
+                height: calc(100vh - 170px);
+                min-height: 420px;
+                border-radius: 12px;
+            }
+        }
+    </style>
+</head>
+<body class="explore-body">
+    <nav class="mobile-nav">
+        <div class="nav-spacer"></div>
+        <div class="nav-center">
+            <a href="{{ url_for('homepage') }}" class="nav-item">
+                <i class="fa-solid fa-house"></i> Home
+            </a>
+            <a href="{{ url_for('local_trees') }}" class="nav-item">
+                <i class="fa-solid fa-tree"></i> Local Trees
+            </a>
+            <a href="{{ url_for('events') }}" class="nav-item">
+                <i class="fa-solid fa-bullhorn"></i> Events
+            </a>
+            <a href="{{ url_for('faqs') }}" class="nav-item">
+                <i class="fa-solid fa-circle-question"></i> FAQs
+            </a>
+            <a href="{{ url_for('care_guide_page') }}" class="nav-item active">
+                <i class="fa-solid fa-book-open"></i> Care Guide
+            </a>
+        </div>
+    </nav>
+    <a href="{{ url_for('faqs') }}" class="mobile-faq-footer-link">FAQs</a>
+
+    <header class="guide-header">
+        <div class="guide-title">
+            <div class="guide-title-icon">TG</div>
+            <div>
+                <h1>Tree Care Guide</h1>
+                <p>Quiet Gardeners Community</p>
+            </div>
+        </div>
+        <a class="guide-download" href="{{ download_url }}">Download PDF</a>
+    </header>
+
+    <main class="guide-shell">
+        <div class="guide-frame-wrap">
+            <iframe class="guide-frame" src="{{ pdf_data_uri }}" title="Tree Care Guide PDF"></iframe>
+        </div>
+        <div class="guide-fallback">
+            If the PDF viewer does not appear, use Download PDF. The guide is embedded on this page as a browser data view, so it should not navigate away.
+        </div>
+    </main>
+</body>
+</html>

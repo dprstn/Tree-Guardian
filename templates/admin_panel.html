@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Tree Guardian</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --green: #0b422a;
+            --green-light: #e6f4ec;
+            --gold: #fbb034;
+            --red: #dc2626;
+            --red-light: #fee2e2;
+            --border: #e8f0eb;
+        }
+
+        body { background: #f4fdf4; }
+
+        .admin-shell {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 24px 20px 100px;
+        }
+
+        .admin-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+        .admin-header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--green);
+        }
+        .admin-header p {
+            margin: 4px 0 0;
+            font-size: 13px;
+            color: #888;
+        }
+        .admin-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: var(--green-light);
+            color: var(--green);
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+            border-radius: 999px;
+            padding: 8px 16px;
+        }
+        .admin-back:hover { background: #cce8d8; }
+
+        .admin-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+        .admin-stat-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(11,66,42,.06);
+        }
+        .admin-stat-card strong {
+            display: block;
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--green);
+        }
+        .admin-stat-card span {
+            font-size: 12px;
+            color: #888;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+        }
+
+        .admin-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 24px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .admin-tabs::-webkit-scrollbar { display: none; }
+        .admin-tab {
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #888;
+            cursor: pointer;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            transition: color .15s;
+        }
+        .admin-tab.active { color: var(--green); border-bottom-color: var(--green); }
+        .admin-tab:hover:not(.active) { color: var(--green); }
+        .tab-count {
+            background: var(--green-light);
+            color: var(--green);
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+        }
+
+        .admin-panel { display: none; }
+        .admin-panel.active { display: block; }
+
+        .admin-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            box-shadow: 0 2px 10px rgba(11,66,42,.06);
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 700px;
+        }
+        .admin-table th {
+            background: #f8faf8;
+            color: #555;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .admin-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f5f5f5;
+            vertical-align: middle;
+            color: #333;
+        }
+        .admin-table tr:last-child td { border-bottom: none; }
+        .admin-table tr:hover td { background: #fafffe; }
+
+        .cell-muted { color: #888; font-size: 12px; }
+        .cell-truncate {
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .badge-healthy  { background: #d1fae5; color: #065f46; border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
+        .badge-critical { background: #fee2e2; color: #b91c1c; border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
+        .badge-needs    { background: #ffedd5; color: #c2410c; border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
+        .badge-admin    { background: #ede9fe; color: #6d28d9; border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
+        .badge-user     { background: var(--green-light); color: var(--green); border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
+
+        .btn-del {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--red-light);
+            color: var(--red);
+            border: none;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .15s;
+        }
+        .btn-del:hover { background: #fca5a5; }
+
+        .btn-view {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--green-light);
+            color: var(--green);
+            border: none;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background .15s;
+        }
+        .btn-view:hover { background: #cce8d8; }
+
+        .action-cell { display: flex; gap: 6px; align-items: center; }
+
+        .admin-empty {
+            text-align: center;
+            padding: 48px 20px;
+            color: #aaa;
+        }
+        .admin-empty i { font-size: 32px; margin-bottom: 10px; display: block; color: #ddd; }
+
+        .admin-flash {
+            padding: 12px 18px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .admin-flash.success { background: #d1fae5; color: #065f46; }
+        .admin-flash.danger  { background: #fee2e2; color: #b91c1c; }
+
+        @media (max-width: 900px) {
+            .admin-shell {
+                padding: 18px 12px 100px;
+            }
+
+            .admin-header h1 {
+                font-size: 21px;
+            }
+
+            .admin-stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .admin-stat-card {
+                padding: 14px 12px;
+            }
+
+            .admin-stat-card strong {
+                font-size: 23px;
+            }
+
+            .admin-table {
+                min-width: 620px;
+            }
+
+            .admin-table th,
+            .admin-table td {
+                padding: 10px 12px;
+            }
+
+            .action-cell {
+                flex-wrap: wrap;
+            }
+
+            .btn-view,
+            .btn-del {
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .admin-shell {
+                padding: 14px 8px 100px;
+            }
+
+            .admin-header {
+                margin-bottom: 18px;
+            }
+
+            .admin-back {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .admin-stats {
+                grid-template-columns: 1fr;
+                margin-bottom: 18px;
+            }
+
+            .admin-tabs {
+                margin-bottom: 16px;
+            }
+
+            .admin-tab {
+                padding: 9px 14px;
+                font-size: 12px;
+                gap: 5px;
+            }
+
+            .tab-count {
+                font-size: 10px;
+                padding: 2px 6px;
+            }
+
+            .admin-table {
+                min-width: 560px;
+                font-size: 12px;
+            }
+
+            .cell-truncate {
+                max-width: 140px;
+            }
+        }
+    </style>
+</head>
+<body class="homepage-body">
+
+<nav class="mobile-nav">
+    <div class="nav-spacer"></div>
+    <div class="nav-center">
+        <a href="{{ url_for('homepage') }}" class="nav-item"><i class="fa-solid fa-house"></i> Home</a>
+        <a href="{{ url_for('local_trees') }}" class="nav-item"><i class="fa-solid fa-tree"></i> Local Trees</a>
+        <a href="{{ url_for('events') }}" class="nav-item"><i class="fa-solid fa-bullhorn"></i> Events</a>
+        <a href="{{ url_for('admin_panel') }}" class="nav-item active"><i class="fa-solid fa-shield-halved"></i> Admin</a>
+    </div>
+    <div class="nav-right-profile">
+        <div class="profile-dropdown">
+            <div class="profile-trigger orange-theme">
+                {% if user.profile_pic and user.profile_pic != 'default_user.png' %}
+                    <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_pic) }}" class="nav-avatar">
+                {% else %}
+                    <i class="fa-solid fa-user"></i>
+                {% endif %}
+                <span class="user-name-text">{{ user.username }}</span>
+                <i class="fa fa-chevron-down"></i>
+            </div>
+            <div class="dropdown-content">
+                <a href="{{ url_for('profile') }}"><i class="fa-solid fa-circle-user"></i> Profile</a>
+                <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="admin-shell">
+    <div class="admin-header">
+        <div>
+            <h1><i class="fa-solid fa-shield-halved" style="font-size:20px;"></i> Admin Panel</h1>
+            <p>Manage community content and users</p>
+        </div>
+        <a href="{{ url_for('homepage') }}" class="admin-back">
+            <i class="fa-solid fa-arrow-left"></i> Back to Home
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="admin-flash {{ category }}">
+                <i class="fa-solid fa-{{ 'circle-check' if category == 'success' else 'circle-exclamation' }}"></i>
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endwith %}
+
+    <div class="admin-stats">
+        <div class="admin-stat-card">
+            <strong>{{ users|length }}</strong>
+            <span>Users</span>
+        </div>
+        <div class="admin-stat-card">
+            <strong>{{ observations|length }}</strong>
+            <span>Observations</span>
+        </div>
+        <div class="admin-stat-card">
+            <strong>{{ comments|length }}</strong>
+            <span>Event Comments</span>
+        </div>
+        <div class="admin-stat-card">
+            <strong>{{ events|length }}</strong>
+            <span>Events</span>
+        </div>
+    </div>
+
+    <div class="admin-tabs">
+        <button class="admin-tab active" onclick="switchTab('users', this)">
+            <i class="fa-solid fa-users"></i> Users
+            <span class="tab-count">{{ users|length }}</span>
+        </button>
+        <button class="admin-tab" onclick="switchTab('observations', this)">
+            <i class="fa-solid fa-magnifying-glass"></i> Observations
+            <span class="tab-count">{{ observations|length }}</span>
+        </button>
+        <button class="admin-tab" onclick="switchTab('comments', this)">
+            <i class="fa-solid fa-comments"></i> Comments
+            <span class="tab-count">{{ comments|length }}</span>
+        </button>
+        <button class="admin-tab" onclick="switchTab('events', this)">
+            <i class="fa-solid fa-bullhorn"></i> Events
+            <span class="tab-count">{{ events|length }}</span>
+        </button>
+    </div>
+
+    <div class="admin-panel active" id="tab-users">
+        <div class="admin-card">
+            {% if users %}
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>
+                            <strong>{{ u.first_name }} {{ u.last_name }}</strong><br>
+                            <span class="cell-muted">@{{ u.username }}</span>
+                        </td>
+                        <td class="cell-muted">{{ u.email }}</td>
+                        <td>
+                            <span class="badge-{{ u.role }}">{{ u.role | capitalize }}</span>
+                        </td>
+                        <td>
+                            <div class="action-cell">
+                                <a href="{{ url_for('public_profile', user_id=u.user_id) }}" class="btn-view">
+                                    <i class="fa-solid fa-eye"></i> View
+                                </a>
+                                {% if u.user_id != user.user_id and u.role != 'admin' %}
+                                <form method="POST" action="{{ url_for('admin_delete_user', user_id=u.user_id) }}"
+                                      onsubmit="return confirm('Delete user {{ u.username }}? This cannot be undone.');">
+                                    <button type="submit" class="btn-del">
+                                        <i class="fa-solid fa-trash"></i> Delete
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="admin-empty">
+                <i class="fa-solid fa-users"></i>
+                No users found.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="admin-panel" id="tab-observations">
+        <div class="admin-card">
+            {% if observations %}
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Tree</th>
+                        <th>User</th>
+                        <th>Notes</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for obs, obs_user, obs_type, tree, species in observations %}
+                    <tr>
+                        <td>
+                            <strong>{{ species.species_name }}</strong><br>
+                            <span class="cell-muted">Tree #{{ tree.tree_id }}</span>
+                        </td>
+                        <td class="cell-muted">@{{ obs_user.username }}</td>
+                        <td class="cell-truncate cell-muted">{{ obs.notes }}</td>
+                        <td class="cell-muted">{{ obs.observed_time.strftime('%d %b %Y') }}</td>
+                        <td>
+                            <div class="action-cell">
+                                <a href="{{ url_for('tree_detail', tree_id=tree.tree_id) }}" class="btn-view">
+                                    <i class="fa-solid fa-eye"></i> View
+                                </a>
+                                <form method="POST" action="{{ url_for('admin_delete_observation', obs_id=obs.observation_id) }}"
+                                      onsubmit="return confirm('Delete this observation?');">
+                                    <button type="submit" class="btn-del">
+                                        <i class="fa-solid fa-trash"></i> Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="admin-empty">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                No observations found.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="admin-panel" id="tab-comments">
+        <div class="admin-card">
+            {% if comments %}
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Event</th>
+                        <th>User</th>
+                        <th>Comment</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for comment, event in comments %}
+                    <tr>
+                        <td>
+                            <strong class="cell-truncate" style="max-width:120px;display:block;">{{ event.title }}</strong>
+                        </td>
+                        <td class="cell-muted">@{{ comment.author.username }}</td>
+                        <td class="cell-truncate cell-muted">{{ comment.content }}</td>
+                        <td class="cell-muted">{{ comment.created_at.strftime('%d %b %Y') }}</td>
+                        <td>
+                            <div class="action-cell">
+                                <a href="{{ url_for('event_detail', event_id=event.event_id) }}" class="btn-view">
+                                    <i class="fa-solid fa-eye"></i> View
+                                </a>
+                                <form method="POST" action="{{ url_for('admin_delete_comment', comment_id=comment.comment_id) }}"
+                                      onsubmit="return confirm('Delete this comment?');">
+                                    <button type="submit" class="btn-del">
+                                        <i class="fa-solid fa-trash"></i> Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="admin-empty">
+                <i class="fa-solid fa-comments"></i>
+                No comments found.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="admin-panel" id="tab-events">
+        <div class="admin-card">
+            {% if events %}
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Event</th>
+                        <th>Organiser</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event, organiser in events %}
+                    <tr>
+                        <td>
+                            <strong>{{ event.title }}</strong><br>
+                            <span class="cell-muted">{{ event.location_name or 'No location' }}</span>
+                        </td>
+                        <td class="cell-muted">@{{ organiser.username if organiser else 'Unknown' }}</td>
+                        <td class="cell-muted">{{ event.event_date.strftime('%d %b %Y') }}</td>
+                        <td>
+                            <div class="action-cell">
+                                <a href="{{ url_for('event_detail', event_id=event.event_id) }}" class="btn-view">
+                                    <i class="fa-solid fa-eye"></i> View
+                                </a>
+                                <form method="POST" action="{{ url_for('delete_event', event_id=event.event_id) }}"
+                                      onsubmit="return confirm('Delete event {{ event.title }}?');">
+                                    <button type="submit" class="btn-del">
+                                        <i class="fa-solid fa-trash"></i> Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="admin-empty">
+                <i class="fa-solid fa-bullhorn"></i>
+                No events found.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<script>
+function switchTab(name, btn) {
+    document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+}
+</script>
+
+</body>
+</html>

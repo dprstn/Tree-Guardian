@@ -1,44 +1,53 @@
+from email.policy import default
+from enum import unique
+
+import pytz
 from  flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
+from sqlalchemy.orm import backref
 
 db = SQLAlchemy()
+
+uk_tz = pytz.timezone('Europe/London')
+
+
 
 class User(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     username = db.Column(db.String(100), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
     role= db.Column(db.String(50), nullable=False)
     dob = db.Column(db.Date)
     hash_password = db.Column(db.String(255), nullable=False)
+    profile_pic = db.Column(db.String(255), default='default_user.png')
     is_active = db.Column(db.Boolean, default=False)
+    email_verified = db.Column(db.Boolean, default=False)
+    verification_token = db.Column(db.String(100), unique=True)
+    token_created_at = db.Column(db.DateTime)
 
 class Species(db.Model):
     species_id = db.Column(db.Integer, primary_key=True)
     species_name = db.Column(db.String(150), nullable=False)
 
-class Location(db.Model):
-    location_id = db.Column(db.Integer, primary_key=True)
-    location_name = db.Column(db.String(150), nullable=False)
-    description = db.Column(db.Text)
-    longitude =  db.Column(db.Float)
-    latitude = db.Column(db.Float)
+
 
 class Tree(db.Model):
     tree_id = db.Column(db.Integer, primary_key=True)
     species_id = db.Column(db.Integer, db.ForeignKey('species.species_id'), nullable=False)
-    location_id = db.Column(db.Integer, db.ForeignKey('location.location_id'), nullable=False)
-    planting_date = db.Column(db.Date)
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
+    planting_date = db.Column(db.Date, nullable=False)
     age = db.Column(db.Integer, nullable=False)
-    tree_size = db.Column(db.Integer, nullable=False)
+    tree_size = db.Column(db.Float, nullable=False)
     health_status = db.Column(db.String(50), nullable=False)
-    qr_code = db.Column(db.LargeBinary)
+    image_url = db.Column(db.String(255), nullable=True) #stores path like "upload/trees/abc123.jpg"
+    notes = db.Column(db.Text)
+    tags = db.relationship('Tag', secondary='tree_tag', backref='trees')
 
-class Tree_photo(db.Model):
-    photo_id = db.Column(db.Integer, primary_key=True)
-    tree_id = db.Column(db.Integer, db.ForeignKey('tree.tree_id'), nullable=False)
-    image_url = db.Column(db.String(255), nullable=False)
+
 
 class Observation_type(db.Model):
     observation_type_id = db.Column(db.Integer, primary_key=True)
@@ -51,16 +60,14 @@ class Observation(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)
     observation_type_id = db.Column(db.Integer, db.ForeignKey('observation_type.observation_type_id'), nullable=False)
     notes = db.Column(db.Text, nullable=False)
-    observed_time = db.Column(db.DateTime, default=datetime)
+    image_url = db.Column(db.String(255), nullable=True)
+    observed_time = db.Column(db.DateTime, default=datetime.now)
+    health_status = db.Column(db.String(50))
 
-class ObservationPhoto(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    observation_id = db.Column(db.Integer, db.ForeignKey('observation.observation_id'), nullable=False)
-    image_url = db.Column(db.String(255), nullable=False)
 
 class Adoption(db.Model):
     adoption_id = db.Column(db.Integer, primary_key=True)
-    tree_id = db.Column(db.Integer, db.ForeignKey('tree.tree_id'), nullable=False)
+    tree_id = db.Column(db.Integer, db.ForeignKey('tree.tree_id'), nullable=False, unique=True)
     user_id = db.Column(db.Integer,db.ForeignKey('user.user_id'), nullable=False)
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
@@ -68,33 +75,119 @@ class Adoption(db.Model):
 class Event(db.Model):
     event_id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
-    location_id = db.Column(db.Integer, db.ForeignKey('location.location_id'))
+    description = db.Column(db.Text, default='')
+    about = db.Column(db.Text, default='')
+    location_name = db.Column(db.String(200), default='')
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
     event_date = db.Column(db.DateTime, nullable=False)
+    end_date = db.Column(db.DateTime, nullable=True)
+    image_url  = db.Column(db.String(300),  default='')
+    created_by    = db.Column(db.Integer,
+                              db.ForeignKey('user.user_id'),
+                              nullable=False)
+    created_at    = db.Column(db.DateTime, default=lambda: datetime.now(uk_tz))
+    attendees = db.relationship('EventAttendee', backref='event', lazy='dynamic')
+
+class EventAttendee(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer,
+                         db.ForeignKey('event.event_id'),
+                         nullable=False)
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey('user.user_id'),
+                        nullable=False)
+
+    status = db.Column(db.String(20), nullable=False, default='going')
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='event_attendances')
+
+
+    __table_args__ = (
+        db.UniqueConstraint('event_id', 'user_id', name='uq_event_attendee'),
+    )
+
+class EventComment(db.Model):
+    comment_id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer,
+                         db.ForeignKey('event.event_id'),
+                         nullable=False)
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey('user.user_id'),
+                        nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    likes = db.Column(db.Integer, default=0)
+
+    author = db.relationship('User', backref='event_comments')
+    liked_by = db.relationship('EventCommentLike',
+                               backref='comment',
+                               cascade='all, delete-orphan')
+
+class EventCommentLike(db.Model):
+    __tablename__ = 'event_comment_like'
+
+    id = db.Column(db.Integer, primary_key=True)
+    comment_id = db.Column(db.Integer,
+                           db.ForeignKey('event_comment.comment_id'),
+                           nullable=False)
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey('user.user_id'),
+                        nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('comment_id', 'user_id', name='uq_comment_like'),
+    )
+
+
+class Tag(db.Model):
+    tag_id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+
+class TreeTag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tree_id = db.Column(db.Integer, db.ForeignKey('tree.tree_id'))
+    tag_id = db.Column(db.Integer, db.ForeignKey('tag.tag_id'))
 ###############################################################################
 class CareGuide(db.Model):
     care_guide_id = db.Column(db.Integer, primary_key=True)
     species_id = db.Column(db.Integer, db.ForeignKey('species.species_id'), nullable=False)
     title = db.Column(db.String(150), nullable=False)
+    url = db.Column(db.String(255)) # merged url link
 
-class CareGuideLink(db.Model):
-    link_id = db.Column(db.Integer, primary_key=True)
-    care_guide_id = db.Column(db.Integer, db.ForeignKey('care_guide.care_guide_id'), nullable=False)
-    url = db.Column(db.String(255), nullable=False)
+
 
 class LoyaltyLedger(db.Model):
     ledger_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)
     points = db.Column(db.Integer, nullable=False)
     reason = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(uk_tz))
 
 class Badge(db.Model):
     badge_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    icon_class = db.Column(db.String(100))
+    points_required = db.Column(db.Integer, default=0)
 
 class UserBadge(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), primary_key=True)
     badge_id = db.Column(db.Integer, db.ForeignKey('badge.badge_id'), primary_key=True)
-    awarded_at = db.Column(db.DateTime, default=datetime)
+    awarded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    badge = db.relationship('Badge', backref='user_badges')
+
+class UserTreeTag(db.Model):
+    __tablename__ = 'user_tree_tags'
+
+    tree_tag_id = db.Column(db.Integer, primary_key=True)
+    tree_id     = db.Column(db.Integer, db.ForeignKey('tree.tree_id'), nullable=False)
+    user_id     = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)
+    tagged_at   = db.Column(db.DateTime, default=lambda: datetime.now(uk_tz), nullable=False)
+    notes       = db.Column(db.String(120), nullable=True)
+    location_name = db.Column(db.String(200), nullable=True)
 
 
 

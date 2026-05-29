@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQs - Tree Guardian</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=faq-careguide-1">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+</head>
+<body class="homepage-body faq-body">
+
+<nav class="mobile-nav">
+    <div class="nav-spacer"></div>
+    <div class="nav-center">
+        <a href="{{ url_for('homepage') }}" class="nav-item">
+            <i class="fa-solid fa-house"></i> Home
+        </a>
+        <a href="{{ url_for('local_trees') }}" class="nav-item">
+            <i class="fa-solid fa-tree"></i> Local Trees
+        </a>
+        <a href="{{ url_for('events') }}" class="nav-item">
+            <i class="fa-solid fa-bullhorn"></i> Events
+        </a>
+        <a href="{{ url_for('faqs') }}" class="nav-item active">
+            <i class="fa-solid fa-circle-question"></i> FAQs
+        </a>
+        <a href="{{ url_for('care_guide_page') }}" class="nav-item">
+            <i class="fa-solid fa-book-open"></i> Care Guide
+        </a>
+        {% if role.lower() == 'admin' %}
+        <a href="{{ url_for('add_tree') }}" class="nav-item">
+            <i class="fa-solid fa-pen-to-square"></i> Add a Tree
+        </a>
+        {% endif %}
+    </div>
+    <div class="nav-right-profile">
+        <div class="profile-dropdown">
+            <div class="profile-trigger orange-theme">
+                {% if user.profile_pic and user.profile_pic != 'default_user.png' %}
+                    <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_pic) }}" class="nav-avatar">
+                {% else %}
+                    <i class="fa-solid fa-user"></i>
+                {% endif %}
+                <span class="user-name-text">{{ user.username }}</span>
+                <i class="fa fa-chevron-down"></i>
+            </div>
+            <div class="dropdown-content">
+                <a href="{{ url_for('profile') }}"><i class="fa-solid fa-circle-user"></i> Profile</a>
+                <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<main class="faq-shell">
+    <section class="faq-hero">
+        <p>Tree Guardian Help</p>
+        <h1>FAQs</h1>
+    </section>
+
+    <section class="faq-grid">
+        <article class="faq-card">
+            <h2>How do I add an observation?</h2>
+            <p>Open Local Trees, choose a tree, then use Add Observation to record wildlife, health alerts, notes, tags, and photos.</p>
+        </article>
+        <article class="faq-card">
+            <h2>What counts as a health alert?</h2>
+            <p>Use Health Alert for disease, visible damage, dryness, pests, broken limbs, or anything that may need attention.</p>
+        </article>
+        <article class="faq-card">
+            <h2>How do points work?</h2>
+            <p>Observations, photos, tree tags, and adoptions add points instantly and appear in your profile activity.</p>
+        </article>
+        <article class="faq-card">
+            <h2>Where is the care guide?</h2>
+            <p>The main PDF is linked above. Tree-specific care guide links also appear inside each tree detail About tab.</p>
+        </article>
+    </section>
+</main>
+
+</body>
+</html>

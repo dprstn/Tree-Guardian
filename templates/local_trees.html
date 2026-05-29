@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore Local Trees</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=faq-careguide-1">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+</head>
+<body class="explore-body {{ 'adopted-cards-only' if mode == 'adopted' else '' }}">
+
+<nav class="mobile-nav">
+    <div class="nav-center">
+        <a href="{{ url_for('homepage') }}" class="nav-item">
+            <i class="fa-solid fa-house"></i> Home
+        </a>
+        {% if mode != 'adopted' %}
+        <a href="{{ url_for('local_trees') }}" class="nav-item active">
+            <i class="fa-solid fa-tree"></i> Local Trees
+        </a>
+        <a href="{{ url_for('faqs') }}" class="nav-item">
+            <i class="fa-solid fa-circle-question"></i> FAQs
+        </a>
+        <a href="{{ url_for('care_guide_page') }}" class="nav-item">
+            <i class="fa-solid fa-book-open"></i> Care Guide
+        </a>
+        {% endif %}
+
+    </div>
+</nav>
+<a href="{{ url_for('faqs') }}" class="mobile-faq-footer-link">FAQs</a>
+    <div class="explorer-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="action-flash-stack">
+                    {% for category, message in messages %}
+                        <div class="action-flash action-flash-{{ category }}">
+                            {% if category == 'points' %}
+                                <i class="fa-solid fa-circle-plus"></i>
+                            {% elif category == 'success' %}
+                                <i class="fa-solid fa-circle-check"></i>
+                            {% else %}
+                                <i class="fa-solid fa-circle-info"></i>
+                            {% endif %}
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        {% if mode != 'adopted' %}
+        <h1 class="explore-header">
+            <span>Explore Local Trees</span>
+        </h1>
+
+        <!-- SEARCH BAR -->
+        <form method="GET" action="{{url_for('local_trees')}}" id="filterForm">
+            <input type="hidden" name="view" id="viewInput" value="{{ request.args.get('view', 'list') }}">
+            <input type="hidden" name="tag" id="tagInput" value="{{ request.args.get('tag', '') }}">
+            {% if mode %}
+            <input type="hidden" name="mode" value="{{ mode }}">
+            {% endif %}
+            <div class="search-bar-container">
+                <i class="fa fa-search search-icon"></i>
+                <input type="text" name="search" class="search-input" value="{{ search_query }}" placeholder="Search trees, species, tag ID or #tags ...">
+            </div>
+
+        <!-- FILTERS -->
+            <div class="filter-bar">
+
+    <!-- HEALTH FILTER -->
+                <div class="filter-dropdown">
+                    <button type="button" class="filter-pill">Health ▼</button>
+
+                    <div class="dropdown-content">
+                        <label>
+                            <input type="checkbox" name="health" value="Healthy"
+                            {% if 'Healthy' in request.args.getlist('health') %}checked{% endif %}> Healthy
+                        </label>
+
+                        <label>
+                            <input type="checkbox" name="health" value="Needs Attention"
+                            {% if 'Needs Attention' in request.args.getlist('health') %}checked{% endif %}> Needs Attention
+                        </label>
+                        <label>
+                            <input type="checkbox" name="health" value="Critical"
+                            {% if 'Critical' in request.args.getlist('health') %}checked{% endif %}> Critical
+                        </label>
+                    </div>
+                </div>
+
+                <!-- STATUS FILTER -->
+                <div class="filter-dropdown">
+                    <button type="button" class="filter-pill">Adopted ▼</button>
+
+                    <div class="dropdown-content">
+                        <label>
+                            <input type="checkbox" name="status" value="available"
+                            {% if 'available' in request.args.getlist('status') %}checked{% endif %}>
+                            Available
+                        </label>
+                        <label>
+                            <input type="checkbox" name="status" value="adopted"
+                            {% if 'adopted' in request.args.getlist('status') %}checked{% endif %}>
+                            Adopted
+                        </label>
+
+                    </div>
+                </div>
+
+                <div class="filter-dropdown">
+                    <button type="button" class="filter-pill">Tags ▼</button>
+
+                    <div class="dropdown-content">
+                        {% if all_tags %}
+                        {% for tag in all_tags %}
+
+                            <label>
+                                <input type="radio" name="tag" value="{{ tag.name }}"
+                                {% if request.args.get('tag') == tag.name %}checked{% endif %}>
+                                #{{ tag.name }}
+                            </label>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- SORT -->
+                <div class="filter-dropdown">
+                    <button type="button" class="filter-pill">Sort ▼</button>
+
+                    <div class="dropdown-content">
+                        <label>
+                            <input type="radio" name="sort" value="newest"
+                            {% if request.args.get('sort', 'newest') == 'newest' %}checked{% endif %}>
+                            Newest
+                        </label>
+                       <label>
+                            <input type="radio" name="sort" value="oldest"
+                            {% if request.args.get('sort') == 'oldest' %}checked{% endif %}>
+                            Oldest
+                       </label>
+
+                       <label>
+                            <input type="radio" name="sort" value="age_oldest"
+                            {% if request.args.get('sort') == 'age_oldest' %}checked{% endif %}>
+                            Oldest by Age
+                       </label>
+
+                       <label>
+                            <input type="radio" name="sort" value="age_youngest"
+                            {% if request.args.get('sort') == 'age_youngest' %}checked{% endif %}>
+                            Youngest by Age
+                       </label>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="filter-actions-row">
+                <button type="submit" class="apply-btn">Apply Filters</button>
+                <a href="javascript:void(0)" onclick="clearFilters()" class="btn-clear">
+                    <i class="fa fa-rotate-left"></i> Clear Filters
+                </a>
+            </div>
+
+        </form>
+        {% endif %}
+
+        {% if mode != 'adopted' %}
+        {% if request.args.get('tag') or request.args.getlist('health')|length > 0 or request.args.getlist('status') %}
+        <div class="active-filters">
+
+            <!-- ADD/UPDATE THE TAG SECTION HERE -->
+            {% if request.args.get('tag') %}
+                <span class="tag-pill active">
+                    #{{ request.args.get('tag') }}
+                    <!-- The link below removes the tag but keeps the current view -->
+                    <a href="javascript:void(0)" onclick="applyTag('')" style="color: inherit; margin-left: 8px;">×</a>
+                </span>
+            {% endif %}
+
+            {% for h in request.args.getlist('health') %}
+                <span class="tag-pill">{{ h }}</span>
+            {% endfor %}
+
+            {% for s in request.args.getlist('status') %}
+                <span class="tag-pill">{{ s }}</span>
+            {% endfor %}
+
+        </div>
+        {% endif %}
+        {% endif %}
+
+        {% if mode != 'adopted' %}
+        {% if all_tags %}
+        <div class="tag-expand-row">
+            <p style="font-weight:700; margin-bottom:10px; color: #0b422a; font-size: 14px;">Explore by Tags:</p>
+
+            <div class="tree-tags-wrap" id="global-tag-wrap">
+                <div class="tree-tags-inner" id="global-tag-inner">
+                    {% for tag in all_tags %}
+                        <a href="javascript:void(0)" onclick="applyTag('{{ tag.name }}')" class="tag-pill">
+                            #{{ tag.name }}
+                        </a>
+                    {% endfor %}
+                </div>
+
+                <button type="button" class="tag-more-btn" id="global-tag-btn" style="display:none" onclick="toggleGlobalTags()">
+                    <i class="fa fa-chevron-down"></i>
+                    <span class="tag-more-label"></span>
+                </button>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        {% if mode != 'adopted' %}
+        {% if session.get('role') == 'admin' %}
+        <div class="io-toolbar">
+
+            {% if tree_count is defined and tree_count > 0 %}
+                <a href="{{ url_for('export_trees') }}"
+                   class="btn-io btn-io--export"
+                   title="Download all trees as CSV">
+                    <span class="btn-io-icon"><i class="fa fa-file-arrow-down"></i></span>
+                    Export CSV
+                </a>
+            {% else %}
+                <span class="btn-io btn-io--export btn-io--disabled"
+                      title="No trees available to export">
+                    <span class="btn-io-icon"><i class="fa fa-file-arrow-down"></i></span>
+                    Export CSV
+                </span>
+            {% endif %}
+
+            <form method="POST"
+                  action="{{ url_for('import_trees') }}"
+                  enctype="multipart/form-data"
+                  id="importForm">
+                <label class="btn-io btn-io--import" title="Upload a CSV to import trees">
+                    <span class="btn-io-icon"><i class="fa fa-file-arrow-up"></i></span>
+                    Import CSV
+                    <input type="file"
+                           name="csv_file"
+                           accept=".csv"
+                           onchange="document.getElementById('importForm').submit()">
+                </label>
+            </form>
+
+        </div>
+        {% if session.get('import_feedback') %}
+        <div class="import-feedback" id="importFeedback">
+
+            <div class="feedback-header">
+                <div class="feedback-header-left">
+                    <i class="fa fa-circle-check"></i>
+                    Import Completed
+                </div>
+                <button class="feedback-dismiss" onclick="dismissFeedback()" title="Dismiss">
+                    <i class="fa fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="feedback-summary">
+                <span class="success">
+                    <i class="fa fa-circle-check"></i>
+                    {{ session.import_feedback.success }} added
+                </span>
+                <span class="skipped">
+                    <i class="fa fa-triangle-exclamation"></i>
+                    {{ session.import_feedback.skipped }} skipped
+                </span>
+            </div>
+
+            {% if session.import_feedback.errors %}
+            <div class="feedback-errors">
+                <strong>Issues found</strong>
+                <ul>
+                    {% for err in session.import_feedback.errors %}
+                        <li>
+                            <i class="fa fa-circle-xmark"></i>
+                            {{ err }}
+                        </li>
+                    {% endfor %}
+                </ul>
+                {% if session.import_feedback.more_errors > 0 %}
+                    <p class="feedback-more">...and {{ session.import_feedback.more_errors }} more</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        </div>
+        {% set _ = session.pop('import_feedback', None) %}
+        {% endif %}
+        {% endif %}
+        {% endif %}
+
+        {% if mode != 'adopted' %}
+        <div class="view-toggle">
+            <button   id="btn-list" class="view-toggle-btn active"  onclick="switchView('list')">
+                <i class="fa fa-list"></i> List
+            </button>
+            <button   id="btn-map" class="view-toggle-btn" onclick="switchView('map')">
+                <i class="fa fa-map-location-dot"></i> Map
+            </button>
+        </div>
+        <div id="map-view" style="display:none;">
+            <div id="tree-map" style="border-radius:12px; border:2.5px solid #0b422a; margin-top:16px;"></div>
+        </div>
+        {% endif %}
+
+
+
+
+
+                    <!-- TREE CARDS LIST -->
+        <div id="list-view">
+            <div class="tree-list">
+                {% if trees|length == 0 %}
+                    <p style="text-align:center; margin-top:40px;">
+                        No trees found matching your filters.
+                    </p>
+                {% endif %}
+                {% for tree, species, adoption, user, obs_count, last_observed in trees %}
+                <div class="tree-card {{ 'card-critical' if tree.health_status == 'Critical' }} {{ 'card-needs' if tree.health_status == 'Needs Attention' }}">
+
+                    <!-- ALERT FLAGS (Top Left) -->
+                    {% if tree.health_status == 'Critical' %}
+                        <div class="emergency-flag flag-red" title="Critical Health Alert">
+                            <i class="fa-solid fa-flag"></i>
+                        </div>
+                    {% elif tree.health_status == 'Needs Attention' %}
+                        <div class="emergency-flag flag-amber" title="Needs Attention">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                    {% endif %}
+
+                    <div class="tree-card-main">
+<!-- LEFT: IMAGE + EDIT BUTTON -->
+                        <div class="tree-img-container">
+
+                            {% if tree.image_url %}
+                                <img src="{{ url_for('static', filename=tree.image_url.split('static/')[-1]) }}" class="tree-img">
+                            {% else %}
+                                <div class="tree-img" style="display:flex; align-items:center; justify-content:center;">
+                                    <i class="fa fa-tree" style="font-size:40px; color:#ccc;"></i>
+                                </div>
+                            {% endif %}
+
+                            {% if session.get('role') == 'admin' %}
+                                <a href="{{ url_for('edit_tree', tree_id=tree.tree_id) }}" class="btn-edit-under">
+                                    <i class="fa fa-pen"></i> Edit Tree
+                                </a>
+                            {% endif %}
+
+                        </div>
+
+                    <!-- Center: Details -->
+
+                        <div class="tree-info">
+                            <!-- 1. Observation Badge (Gold) -->
+                            <div class="badge-obs-gold">
+                                <i class="fa-solid fa-eye"></i> {{ obs_count }} observations
+                            </div>
+
+                            <!-- 2. Species Name -->
+                            <h3 style="margin-bottom: 0;">{{ species.species_name }}</h3>
+
+                            <!-- 3. Tree ID -->
+                            <p class="tree-loc" style="margin: 2px 0 8px 0;">
+                                <i class="fa-solid fa-location-dot"></i> Tree ID #{{ tree.tree_id }}
+                            </p>
+
+                            <!-- 4. Status Badges (Moved here to be directly under ID) -->
+                            <div class="status-badges-group" style="margin-bottom: 15px;">
+                                <span class="badge badge-{{ 'healthy' if tree.health_status == 'Healthy' else 'needs' if tree.health_status == 'Needs Attention' else 'critical' }} badge-health">
+                                    <i class="fa {{ 'fa-leaf' if tree.health_status == 'Healthy' else 'fa-triangle-exclamation' if tree.health_status == 'Needs Attention' else 'fa-circle-xmark' }}"></i>
+                                    {{ tree.health_status }}
+                                </span>
+                                {% if not adoption %}
+                                    <span class="badge badge-available">
+                                        <i class="fa-solid fa-circle-check"></i> Available
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            <!-- 5. Stats Row (Kept as requested) -->
+                            <div class="tree-stats-row">
+                                <div class="tree-stat">
+                                    <i class="fa fa-calendar-days"></i>
+                                    <span class="tree-stat-val">{{ tree.age }} yrs</span>
+                                    <span class="tree-stat-lbl">Age</span>
+                                </div>
+                                <div class="tree-stat">
+                                    <i class="fa fa-tree"></i>
+                                    <span class="tree-stat-val">
+                                        {% if tree.tree_size <= 5 %}Small
+                                        {% elif tree.tree_size <= 15 %}Medium
+                                        {% else %}Large{% endif %}
+                                    </span>
+                                    <span class="tree-stat-lbl">Size</span>
+                                </div>
+                                <div class="tree-stat">
+                                    <i class="fa fa-seedling"></i>
+                                    <span class="tree-stat-val">
+                                        {% if tree.planting_date %}{{ tree.planting_date.strftime('%d %b %Y') }}{% else %}Unknown{% endif %}
+                                    </span>
+                                    <span class="tree-stat-lbl">Planted</span>
+                                </div>
+                                <div class="tree-stat">
+                                    <i class="fa fa-clock"></i>
+                                    <span class="tree-stat-val">
+                                        {% if last_observed %}
+                                            {# We force the calculation here #}
+                                            {% set diff = (now - last_observed).total_seconds() %}
+
+                                            {# IF THE NUMBER IS NEGATIVE, MAKE IT 0 #}
+                                            {% if diff < 0 %}{% set diff = 0 %}{% endif %}
+
+                                            {% if diff < 60 %}
+                                                Just now
+                                            {% elif diff < 3600 %}
+                                                {{ (diff / 60)|int }}m ago
+                                            {% elif diff < 86400 %}
+                                                {{ (diff / 3600)|int }}h ago
+                                            {% else %}
+                                                {{ (diff / 86400)|int }}d ago
+                                            {% endif %}
+                                        {% else %}
+                                            None
+                                        {% endif %}
+                                    </span>
+                                    <span class="tree-stat-lbl">Observed</span>
+                                </div>
+                            </div>
+
+                            <!-- 6. Smart Tags -->
+                            {% if tree.tags %}
+                            <div class="tree-tags-wrap" id="tagwrap-{{ tree.tree_id }}">
+                                <div class="tree-tags-inner" id="taginner-{{ tree.tree_id }}">
+                                    {% for t in tree.tags %}
+                                        <span class="tag-pill">#{{ t.name }}</span>
+                                    {% endfor %}
+                                </div>
+                                <button class="tag-more-btn" id="tagbtn-{{ tree.tree_id }}"
+                                        style="display:none"
+                                        onclick="toggleTags({{ tree.tree_id }})">
+                                    <i class="fa fa-chevron-down"></i>
+                                    <span class="tag-more-label"></span>
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <!-- Right: QR Code -->
+                        <div class="qr-container">
+                            <p class="tag-id">TAG #{{ tree.tree_id }}</p>
+                            <img src="{{ url_for('generate_qr', tree_id=tree.tree_id) }}" class="qr-img">
+                            <div class="qr-actions">
+                                <a href="{{ url_for('generate_qr', tree_id=tree.tree_id) }}"
+                                   download="tree_{{ tree.tree_id }}_qr.png"
+                                   class="qr-icon-btn"
+                                   title="Download QR">
+                                    <i class="fa fa-download"></i>
+                                </a>
+
+                                    <button onclick="printQR('{{ url_for('generate_qr', tree_id=tree.tree_id) }}')"
+                                            class="qr-icon-btn"
+                                            title="Print QR">
+                                        <i class="fa fa-print"></i>
+                                    </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer: Adoption Logic -->
+                    <!-- Footer: Adoption Logic -->
+                    <div class="adoption-bar">
+                        <div class="adopter-info">
+                            {% if adoption and user %}
+                                <i class="fa fa-user-check" style="color:#0b422a;"></i> Adopted by <strong>{{ user.username}}</strong>
+                            {% else %}
+                                <i class="fa fa-circle-dot" style="color:#fbb034;"></i> Available to adopt
+                            {% endif %}
+                        </div>
+                        <div class="adoption-actions">
+                            {% if mode == 'adopt' and not adoption %}
+
+                            <form method="POST" action="{{ url_for('adopt_tree', tree_id=tree.tree_id) }}" style="display:inline;">
+                                <input type="hidden" name="next" value="{{ request.url }}">
+                                <button type="submit" class="btn-adopt">Adopt</button>
+                            </form>
+                            {% endif %}
+
+                            {% if mode == 'observe' %}
+                            <button type="button"
+                                    class="btn-add-observation"
+                                    data-tree-id="{{ tree.tree_id }}"
+                                    data-species-name="{{ species.species_name }}">
+                                <i class="fa fa-plus"></i> Add Observation
+                            </button>
+                            {% endif %}
+
+                            <a href="{{ url_for ('tree_detail', tree_id=tree.tree_id) }}" class="btn-view">
+                                view details<i class="fa fa-chevron-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                    </div>
+                    {% endfor %}
+                    </div>
+
+              <!-- End of tree-list -->
+
+            <!-- REAL WORLD PAGINATION SECTION -->
+
+            <div class="pagination-container">
+
+                <!-- Previous Button -->
+                {% if pagination.has_prev %}
+                    <a href="{{ url_for('local_trees', **dict(request.args, page=pagination.prev_num)) }}" class="btn-pag">
+                        <i class="fa fa-chevron-left"></i>
+                    </a>
+                {% endif %}
+
+                <div class="page-numbers">
+                    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                        {% if page_num %}
+                            {% if pagination.page == page_num %}
+                                <span class="btn-pag active">{{ page_num }}</span>
+                            {% else %}
+                                <!-- Page Number Link -->
+                                <a href="{{ url_for('local_trees', **dict(request.args, page=page_num)) }}" class="btn-pag">
+                                    {{ page_num }}
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            <span class="pag-dots">...</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- Next Button -->
+                {% if pagination.has_next %}
+                    <a href="{{ url_for('local_trees', **dict(request.args, page=pagination.next_num)) }}" class="btn-pag">
+                        <i class="fa fa-chevron-right"></i>
+                    </a>
+                {% endif %}
+            </div>
+            <!-- END PAGINATION -->
+
+
+        </div>
+
+    </div>
+
+    <div class="observation-modal-overlay" id="observation-modal" onclick="closeObservationOnOverlay(event)">
+        <div class="observation-modal-sheet" role="dialog" aria-modal="true" aria-labelledby="observation-modal-title">
+            <button type="button" class="observation-modal-close" onclick="closeObservationModal()" aria-label="Close">
+                <i class="fa fa-xmark"></i>
+            </button>
+            <div class="observation-modal-handle" aria-hidden="true"></div>
+
+            <form id="observation-form" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="next" value="{{ request.url }}">
+
+                <h2 id="observation-modal-title">Add Observation</h2>
+                <p class="observation-modal-sub">Help the community by sharing what you see.</p>
+
+                <div class="observation-field">
+                    <span class="observation-label">Observation Type</span>
+                    <div class="observation-type-grid">
+                        <label class="observation-type-option">
+                            <input type="radio" name="obs_type" value="Wildlife" checked onchange="toggleObservationHealth()">
+                            <span class="observation-type-card">
+                                <i class="fa fa-leaf observation-type-icon wildlife"></i>
+                                <span>
+                                    <strong>Wildlife Sighting</strong>
+                                    <small>Animals, birds, insects, etc.</small>
+                                </span>
+                            </span>
+                        </label>
+
+                        <label class="observation-type-option">
+                            <input type="radio" name="obs_type" value="Disease" onchange="toggleObservationHealth()">
+                            <span class="observation-type-card">
+                                <i class="fa fa-triangle-exclamation observation-type-icon alert"></i>
+                                <span>
+                                    <strong>Health Alert</strong>
+                                    <small>Disease, damage, or other issues</small>
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="observation-field observation-health-field" id="observation-health-field">
+                    <label class="observation-label" for="observation-health-status">Tree Health Status</label>
+                    <select name="health_status" id="observation-health-status">
+                        <option value="">Select health status</option>
+                        <option value="Critical">Critical</option>
+                        <option value="Needs Attention">Needs Attention</option>
+                        <option value="Healthy">Healthy</option>
+                    </select>
+                </div>
+
+                <div class="observation-field">
+                    <label class="observation-label" for="observation-notes">Your Notes</label>
+                    <div class="observation-notes-wrap">
+                        <textarea id="observation-notes"
+                                  name="notes"
+                                  maxlength="300"
+                                  required
+                                  placeholder="Write your observation notes..."
+                                  oninput="updateObservationCount()"></textarea>
+                        <span id="observation-char-count">0/300</span>
+                    </div>
+                </div>
+
+                <div class="observation-field">
+                    <label class="observation-label" for="observation-tags">Tags <span>(optional)</span></label>
+                    <input id="observation-tags"
+                           class="observation-text-input"
+                           type="text"
+                           name="tags"
+                           placeholder="#disease #dry #fungus">
+                </div>
+
+                <div class="observation-field">
+                    <label class="observation-label" for="observation-photo">Add Photo <span>(optional)</span></label>
+                    <label class="observation-photo-drop" for="observation-photo">
+                        <i class="fa-regular fa-image"></i>
+                        <strong id="observation-photo-label">Tap to add a photo</strong>
+                        <small>JPG, PNG up to 5MB</small>
+                    </label>
+                    <input id="observation-photo" type="file" name="photo" accept="image/png,image/jpeg" onchange="showObservationPhotoName()">
+                    <p class="observation-photo-help">
+                        <i class="fa-regular fa-camera"></i> Photos help others understand what you saw
+                    </p>
+                </div>
+
+                <div class="observation-modal-actions">
+                    <button type="button" class="observation-cancel-btn" onclick="closeObservationModal()">Cancel</button>
+                    <button type="submit" class="observation-submit-btn">
+                        <i class="fa-regular fa-paper-plane"></i> Submit Observation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+<script>
+const TREE_DATA = [
+    {% for tree, species, adoption, user, obs_count, last_observed in all_trees %}
+    {
+        id:         {{ tree.tree_id }},
+        species:    {{ species.species_name | tojson }},
+        lat:        {{ tree.latitude }},
+        lng:        {{ tree.longitude }},
+        health:     {{ tree.health_status | tojson }},
+        obs:        {{ obs_count }},
+        age:        {{ tree.age | tojson }},
+        size:       {{ tree.tree_size | tojson }},
+        planted:    {% if tree.planting_date %}{{ tree.planting_date.strftime('%d %b %Y') | tojson }}{% else %}null{% endif %},
+        tags:       {{ tree.tags | map(attribute='name') | list | tojson }},
+        adopted:    {{ 'true' if adoption else 'false' }},
+        adopter:    {{ user.username | tojson if (adoption and user) else 'null' }},
+        last_obs:   {% if last_observed %}{{ last_observed.isoformat() | tojson }}{% else %}null{% endif %},
+        image:      {{ (tree.image_url.split('static/')[-1] if tree.image_url else '') | tojson }},
+        detail_url: {{ url_for('tree_detail', tree_id=tree.tree_id) | tojson }},
+        qr_url:     {{ url_for('generate_qr', tree_id=tree.tree_id) | tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+</script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+function applyTag(tagName) {
+    // 1. Set the hidden tag input to the tag we clicked
+    document.getElementById('tagInput').value = tagName;
+
+    // 2. The 'viewInput' is already kept up-to-date by your switchView function!
+
+    // 3. Submit the form
+    document.getElementById('filterForm').submit();
+}
+
+function openObservationModal(treeId, speciesName) {
+    const modal = document.getElementById('observation-modal');
+    const form = document.getElementById('observation-form');
+
+    form.action = `/add_observation/${treeId}`;
+    form.setAttribute('aria-label', `Add observation for ${speciesName} tree ${treeId}`);
+    form.reset();
+    document.querySelector('input[name="obs_type"][value="Wildlife"]').checked = true;
+    document.getElementById('observation-char-count').textContent = '0/300';
+    document.getElementById('observation-photo-label').textContent = 'Tap to add a photo';
+    toggleObservationHealth();
+    modal.classList.add('open');
+    document.body.classList.add('observation-modal-open');
+}
+
+function closeObservationModal() {
+    document.getElementById('observation-modal').classList.remove('open');
+    document.body.classList.remove('observation-modal-open');
+}
+
+function closeObservationOnOverlay(event) {
+    if (event.target.id === 'observation-modal') {
+        closeObservationModal();
+    }
+}
+
+function toggleObservationHealth() {
+    const selected = document.querySelector('input[name="obs_type"]:checked');
+    const healthField = document.getElementById('observation-health-field');
+    const healthSelect = document.getElementById('observation-health-status');
+    const isHealthAlert = selected && selected.value === 'Disease';
+
+    healthField.style.display = isHealthAlert ? 'block' : 'none';
+    healthSelect.required = isHealthAlert;
+    if (!isHealthAlert) {
+        healthSelect.value = '';
+    }
+}
+
+function updateObservationCount() {
+    const notes = document.getElementById('observation-notes');
+    document.getElementById('observation-char-count').textContent = `${notes.value.length}/300`;
+}
+
+function showObservationPhotoName() {
+    const input = document.getElementById('observation-photo');
+    const label = document.getElementById('observation-photo-label');
+    label.textContent = input.files && input.files[0] ? input.files[0].name : 'Tap to add a photo';
+}
+
+document.querySelectorAll('.btn-add-observation').forEach(button => {
+    button.addEventListener('click', function() {
+        openObservationModal(this.dataset.treeId, this.dataset.speciesName);
+    });
+});
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeObservationModal();
+    }
+});
+function clearFilters() {
+
+    document.getElementById('tagInput').value = '';
+    const search = document.querySelector('input[name="search"]');
+    if(search) search.value = '';
+
+
+    document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
+
+
+    document.getElementById('filterForm').submit();
+}
+
+// Filter dropdowns
+document.querySelectorAll(".filter-pill").forEach(btn => {
+    btn.addEventListener("click", function() {
+        this.parentElement.classList.toggle("active");
+    });
+});
+document.addEventListener("click", function(e) {
+    document.querySelectorAll(".filter-dropdown").forEach(drop => {
+        if (!drop.contains(e.target)) drop.classList.remove("active");
+    });
+});
+
+// ── Write active view into form before submit ──
+function rememberView() {
+    const isMap = document.getElementById('btn-map').classList.contains('active');
+    document.getElementById('viewInput').value = isMap ? 'map' : 'list';
+}
+
+// ── Toggle list / map ──
+function switchView(view) {
+    const listEl  = document.getElementById('list-view');
+    const mapEl   = document.getElementById('map-view');
+    const btnList = document.getElementById('btn-list');
+    const btnMap  = document.getElementById('btn-map');
+
+    const vInput = document.getElementById('viewInput');
+
+    // Update the hidden input value so the form "remembers" the tab
+    if (vInput) {
+        vInput.value = view;
+    }
+
+    if (view === 'map') {
+        listEl.style.display = 'none';
+        mapEl.style.display  = 'block';
+        btnList.classList.remove('active');
+        btnMap.classList.add('active');
+        if (!window._mapInitialised) {
+            initMap();
+        } else {
+            setTimeout(() => window._leafletMap && window._leafletMap.invalidateSize(), 50);
+        }
+    } else {
+        mapEl.style.display  = 'none';
+        listEl.style.display = 'block';
+        btnMap.classList.remove('active');
+        btnList.classList.add('active');
+    }
+}
+
+// ── Map init — runs once on first Map click ──
+function initMap() {
+    window._mapInitialised = true;
+
+    const validTrees = TREE_DATA.filter(t => t.lat != null && t.lng != null);
+    const centre = validTrees.length
+        ? [validTrees[0].lat, validTrees[0].lng]
+        : [51.8993, -2.0782];
+
+    const map = L.map('tree-map', {
+        center: centre,
+        zoom: 15,
+        scrollWheelZoom: true   // desktop scroll zoom on
+    });
+    window._leafletMap = map;
+
+    // Disable scroll zoom on touch devices — pinch to zoom instead
+    if ('ontouchstart' in window) {
+        map.scrollWheelZoom.disable();
+    }
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+    }).addTo(map);
+
+    const treeIcon = L.divIcon({
+        className: '',
+        html: `<div style="
+                    width:36px; height:36px;
+                    background:#2d8a4e;
+                    border-radius:50%;
+                    border:3px solid #fff;
+                    box-shadow:0 2px 8px rgba(0,0,0,0.30);
+                    display:flex; align-items:center; justify-content:center;">
+                <i class='fa fa-tree' style='color:#fff; font-size:16px;'></i>
+               </div>`,
+        iconSize: [36, 36], iconAnchor: [18, 18], popupAnchor: [0, -20]
+    });
+
+    validTrees.forEach(tree => {
+            // 1. Determine which tiny icon to show on the marker
+        let alertHtml = '';
+        if (tree.health === 'Critical') {
+            alertHtml = '<div class="map-marker-alert red"><i class="fa-solid fa-flag"></i></div>';
+        } else if (tree.health === 'Needs Attention') {
+            alertHtml = '<div class="map-marker-alert amber"><i class="fa-solid fa-triangle-exclamation"></i></div>';
+        }
+
+        // 2. Create the Icon (Adding alertHtml inside the div)
+        const treeIcon = L.divIcon({
+            className: '',
+            html: `<div class="map-tree-circle">
+                    <i class='fa fa-tree'></i>
+                    ${alertHtml}
+                   </div>`,
+            iconSize: [36, 36],
+            iconAnchor: [18, 18],
+            popupAnchor: [0, -20]
+        });
+        const healthClass = tree.health === 'Healthy'         ? 'healthy'
+                          : tree.health === 'Needs Attention' ? 'needs'
+                          : 'critical';
+
+        const healthIcon = tree.health === 'Healthy'
+            ? '<i class="fa fa-leaf"></i>'
+            : tree.health === 'Needs Attention'
+            ? '<i class="fa fa-triangle-exclamation"></i>'
+            : '<i class="fa fa-circle-xmark"></i>';
+
+        const imgHtml = tree.image
+            ? `<img src="/static/${tree.image}" class="map-popup-img" alt="${tree.species}"
+                    onerror="this.outerHTML='<div class=map-popup-img-placeholder><i class=fa fa-tree></i></div>'">`
+            : `<div class="map-popup-img-placeholder"><i class="fa fa-tree"></i></div>`;
+
+        const sizeLabel = tree.size <= 5  ? 'Small'
+                        : tree.size <= 15 ? 'Medium'
+                        : 'Large';
+
+        // Last observed relative time
+        let lastSeenHtml = 'None';
+        if (tree.last_obs) {
+            const diff = (Date.now() - new Date(tree.last_obs).getTime()) / 1000;
+            if (diff < 3600)       lastSeenHtml = Math.floor(diff / 60) + 'm ago';
+            else if (diff < 86400) lastSeenHtml = Math.floor(diff / 3600) + 'h ago';
+            else                   lastSeenHtml = Math.floor(diff / 86400) + 'd ago';
+        }
+
+        // Tags with collapsible toggle
+        let tagsHtml = '';
+        if (tree.tags && tree.tags.length > 0) {
+            const uid = `tags-${tree.id}`;
+            const visibleTags = tree.tags.slice(0, 2)
+                .map(t => `<span class="mp-tag">#${t}</span>`).join('');
+            const hiddenTags = tree.tags.slice(2)
+                .map(t => `<span class="mp-tag">#${t}</span>`).join('');
+            const moreBtn = tree.tags.length > 2
+                ? `<button class="mp-tag-more" onclick="
+                        var el=document.getElementById('${uid}');
+                        var open=el.style.display!=='none';
+                        el.style.display=open?'none':'flex';
+                        this.innerHTML=open
+                            ? '<i class=\\'fa fa-chevron-down\\'></i> +${tree.tags.length - 2} more'
+                            : '<i class=\\'fa fa-chevron-up\\'></i> less';
+                   "><i class="fa fa-chevron-down"></i> +${tree.tags.length - 2} more</button>
+                   <div id="${uid}" class="mp-tag-extra" style="display:none">${hiddenTags}</div>`
+                : '';
+            tagsHtml = `<div class="mp-tag-section"><div class="mp-tags">${visibleTags}${moreBtn}</div></div>`;
+        }
+
+        const adoptedHtml = tree.adopted
+            ? `<div class="mp-adopted adopted"><i class="fa fa-user-check"></i> Adopted by <strong>${tree.adopter}</strong></div>`
+            : `<div class="mp-adopted available"><i class="fa fa-circle-dot"></i> Available to adopt</div>`;
+
+        const qrHtml = `
+            <div class="mp-qr-row">
+                <img src="${tree.qr_url}" class="mp-qr-img" alt="QR #${tree.id}">
+                <div class="mp-qr-actions">
+                    <a href="${tree.qr_url}" download="tree_${tree.id}_qr.png" class="mp-qr-btn" title="Download QR">
+                        <i class="fa fa-download"></i>
+                    </a>
+                    <button class="mp-qr-btn" title="Print QR" onclick="printQR('${tree.qr_url}')">
+                        <i class="fa fa-print"></i>
+                    </button>
+                </div>
+            </div>`;
+
+        const popup = `
+            <div class="map-popup">
+                <div class="mp-img-wrap">${imgHtml}</div>
+                <div class="mp-body" style="padding:11px;">
+                    <!-- Green/Gold Observation Badge -->
+                    <div class="mp-obs-badge" style="background:#0b422a; color:#fbb034; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:800; display:inline-block; margin-bottom:8px;">
+                        <i class="fa fa-eye"></i> ${tree.obs} Observations
+                    </div>
+                    <div class="mp-header-row" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="mp-title-col">
+                            <p class="mp-species">${tree.species}</p>
+                            <p class="mp-location"><i class="fa fa-location-dot"></i> ${tree.lat.toFixed(3)}, ${tree.lng.toFixed(3)}</p>
+                        </div>
+                        <span class="mp-health-badge ${healthClass}">${healthIcon} ${tree.health}</span>
+                    </div>
+                    <div class="mp-body">
+                        <div class="mp-stats">
+                            <div class="mp-stat">
+                                <i class="fa fa-calendar-days"></i>
+                                <span class="mp-stat-val">${tree.age ?? '—'} yrs</span>
+                                <span class="mp-stat-lbl">Age</span>
+                            </div>
+                            <div class="mp-stat">
+                                <i class="fa fa-tree"></i>
+                                <span class="mp-stat-val">${sizeLabel}</span>
+                                <span class="mp-stat-lbl">Size</span>
+                            </div>
+                            <div class="mp-stat">
+                                <i class="fa fa-seedling"></i>
+                                <span class="mp-stat-val">${tree.planted ?? '—'}</span>
+                                <span class="mp-stat-lbl">Planted</span>
+                            </div>
+                            <div class="mp-stat">
+                                <i class="fa fa-clock"></i>
+                                <span class="mp-stat-val">${lastSeenHtml}</span>
+                                <span class="mp-stat-lbl">Observed</span>
+                            </div>
+                        </div>
+                        ${adoptedHtml}
+                        ${tagsHtml}
+                        ${qrHtml}
+                        <a href="${tree.detail_url}" class="mp-btn">
+                            View Details <i class="fa fa-chevron-right"></i>
+                        </a>
+                    </div>
+                </div>`;
+
+            L.marker([tree.lat, tree.lng], { icon: treeIcon })
+                .addTo(map)
+                .bindPopup(popup, { maxWidth: 270, minWidth: 270 });
+        });
+
+    setTimeout(() => {
+        map.invalidateSize();
+        if (validTrees.length > 1) {
+            map.fitBounds(validTrees.map(t => [t.lat, t.lng]), { padding: [40, 40], maxZoom: 17 });
+        } else if (validTrees.length === 1) {
+            map.setView([validTrees[0].lat, validTrees[0].lng], 16);
+        }
+    }, 150);
+}
+
+// ── On load: restore map view + measure tag overflow ──
+document.addEventListener('DOMContentLoaded', function() {
+
+    // Restore map if URL says ?view=map
+    const params = new URLSearchParams(window.location.search);
+        const savedView = params.get('view');
+
+
+    const gInner = document.getElementById('global-tag-inner');
+    const gBtn = document.getElementById('global-tag-btn');
+
+    if (gInner && gBtn) {
+        const gTags = gInner.querySelectorAll('.tag-pill');
+        if (gTags.length > 0) {
+
+            const firstTagTop = gTags[0].offsetTop;
+            let hiddenCount = 0;
+
+            gTags.forEach(tag => {
+
+                if (tag.offsetTop - firstTagTop > 45) {
+                    tag.classList.add('tag-hidden');
+                    hiddenCount++;
+                }
+            });
+
+            if (hiddenCount > 0) {
+                const label = `+${hiddenCount} more`;
+                gBtn.style.display = 'inline-flex';
+                gBtn.querySelector('.tag-more-label').textContent = label;
+                gBtn.setAttribute('data-original-count', label);
+            }
+        }
+    }
+    if (savedView === 'map') {
+        switchView('map');
+    } else {
+        switchView('list');
+    }
+
+
+    // Smart tag overflow detection
+   document.querySelectorAll('[id^="tagwrap-"]').forEach(wrap => {
+        const id    = wrap.id.replace('tagwrap-', '');
+        const inner = document.getElementById('taginner-' + id);
+        const btn   = document.getElementById('tagbtn-' + id);
+        if (!inner || !btn) return;
+
+        const tags  = inner.querySelectorAll('.tag-pill');
+        if (tags.length === 0) return;
+
+        // Measure how many tags fit in the first line
+        const lineH = tags[0].offsetHeight + 6;
+        if (inner.scrollHeight > lineH * 1.5) {
+            let visibleCount = 0;
+            let usedWidth    = 0;
+            const maxWidth   = inner.offsetWidth;
+
+            tags.forEach(tag => {
+                usedWidth += tag.offsetWidth + 6;
+                // Leave a little room for the "more" button
+                if (usedWidth <= maxWidth - 60) {
+                    visibleCount++;
+                }
+            });
+
+            const hiddenCount = tags.length - visibleCount;
+
+            if (hiddenCount > 0) {
+                let shown = 0;
+                tags.forEach(tag => {
+                    shown++;
+                    if (shown > visibleCount) {
+                        tag.classList.add('tag-hidden');
+                    }
+                });
+
+                const countLabel = `+${hiddenCount} more`;
+                btn.style.display = 'inline-flex';
+                btn.querySelector('.tag-more-label').textContent = countLabel;
+
+                // Store the "+X more" text so we can get it back after clicking "less"
+                btn.setAttribute('data-original-count', countLabel);
+            }
+        }
+    });
+});
+// ── Toggle hidden tags in list card ──
+function toggleTags(id) {
+
+    const inner = document.getElementById('taginner-' + id);
+    const btn = document.getElementById('tagbtn-' + id);
+
+    // Toggle the expansion class
+    inner.classList.toggle('expanded');
+
+    const isExpanded = inner.classList.contains('expanded');
+
+    // Change Icon and Text
+    btn.querySelector('i').className = isExpanded ? 'fa fa-chevron-up' : 'fa fa-chevron-down';
+    btn.querySelector('.tag-more-label').textContent = isExpanded ? 'less' : 'more';
+
+    // Set a data attribute to keep track of state
+    btn.dataset.open = isExpanded ? '1' : '0';
+}
+function toggleGlobalTags() {
+    const inner = document.getElementById('global-tag-inner');
+    const btn = document.getElementById('global-tag-btn');
+
+    inner.classList.toggle('expanded');
+    const isExpanded = inner.classList.contains('expanded');
+
+    // Update Icon
+    btn.querySelector('i').className = isExpanded ? 'fa fa-chevron-up' : 'fa fa-chevron-down';
+
+    // Update Text (Restore the +X more count when closing)
+    const originalCount = btn.getAttribute('data-original-count');
+    btn.querySelector('.tag-more-label').textContent = isExpanded ? 'show less' : originalCount;
+}
+
+// ── QR print ──
+function printQR(imageUrl) {
+    const w = window.open('', '_blank');
+    w.document.write(`
+        <html><head><title>Print QR</title>
+        <style>
+            body { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; margin:0; font-family:sans-serif; }
+            img  { width:250px; margin-bottom:20px; }
+            button { padding:10px 20px; border:none; background:#0b422a; color:#fff; border-radius:5px; cursor:pointer; }
+        </style></head>
+        <body>
+            <img src="${imageUrl}"/>
+            <button onclick="window.close()">Close</button>
+            <script>
+                window.onload = function() { window.focus(); window.print(); };
+                window.onafterprint = function() { window.close(); };
+            <\/script>
+        </body></html>`);
+    w.document.close();
+}
+
+// ── Import feedback auto-dismiss ──
+const fb = document.getElementById('importFeedback');
+if (fb) {
+    setTimeout(() => { fb.classList.add('dismissing'); setTimeout(() => fb.remove(), 500); }, 6700);
+}
+function dismissFeedback() {
+    const el = document.getElementById('importFeedback');
+    if (el) { el.classList.add('dismissing'); setTimeout(() => el.remove(), 500); }
+}
+
+
+document.addEventListener("DOMContentLoaded", function() {
+    // 1. Restore the active view (Map or List)
+    const urlParams = new URLSearchParams(window.location.search);
+    const savedView = urlParams.get('view');
+    if (savedView === 'map') {
+        switchView('map');
+    } else {
+        switchView('list');
+    }
+
+    // 2. Smart Tag Logic (Overflow detection)
+    document.querySelectorAll('[id^="tagwrap-"]').forEach(wrap => {
+        const id = wrap.id.replace('tagwrap-', '');
+        const inner = document.getElementById('taginner-' + id);
+        const btn = document.getElementById('tagbtn-' + id);
+        if (!inner || !btn) return;
+
+        const tags = inner.querySelectorAll('.tag-pill');
+        if (tags.length === 0) return;
+
+        // ... your measurement logic to find 'visible' and 'hidden' counts ...
+        // (Assuming your logic calculates the 'hidden' variable here)
+
+        if (hidden > 0) {
+            let shown = 0;
+            tags.forEach(tag => {
+                shown++;
+                if (shown > visible) {
+                    tag.classList.add('tag-hidden');
+                }
+            });
+
+            // --- THE FIX: STORE THE TEXT ---
+            const countLabel = `+${hidden} more`;
+            btn.style.display = 'inline-flex';
+            btn.querySelector('.tag-more-label').textContent = countLabel;
+
+            // This stores "+7 more" in the button's memory
+            btn.setAttribute('data-original-count', countLabel);
+        }
+    });
+});
+
+</script>
+
+
+
+
+</body>
+</html>
