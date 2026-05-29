@@ -1014,6 +1014,8 @@ def local_trees():
     status_filters = request.args.getlist('status')
     species_filter = request.args.get('species', '')
     sort_order = request.args.get('sort', 'newest')
+    if sort_order not in ('newest', 'oldest', 'age_oldest', 'age_youngest'):
+        sort_order = 'newest'
     tag_filter = request.args.get('tag')
     mode = request.args.get('mode', '')
 
@@ -1050,17 +1052,6 @@ def local_trees():
         .outerjoin(Observation, Tree.tree_id == Observation.tree_id)\
         .outerjoin(latest_obs_sq, Tree.tree_id == latest_obs_sq.c.tree_id)\
         .group_by(Tree.tree_id, latest_obs_sq.c.last_observed)
-
-    health_priority = case(
-        {
-            'Critical' : 1,
-            'Needs Attention' : 2,
-            'Healthy': 3,
-        },
-        value=Tree.health_status,
-        else_=4
-    )
-    query = query.order_by(health_priority, Tree.tree_id.desc())
 
     if tag_filter:
         query = query.join(Tree.tags).filter(Tag.name == tag_filter)
@@ -1104,13 +1095,22 @@ def local_trees():
         elif 'adopted' in status_filters and 'available' not in status_filters:
             query = query.filter(Adoption.adoption_id.is_not(None))
 
+    health_priority = case(
+        {
+            'Critical': 1,
+            'Needs Attention': 2,
+            'Healthy': 3,
+        },
+        value=Tree.health_status,
+        else_=4
+    )
 
-
+    query = query.order_by(None)
     if sort_order == 'oldest':
-        query = query.order_by(Tree.tree_id.asc())
+        query = query.order_by(health_priority, Tree.tree_id.asc())
 
     elif sort_order == 'newest':
-        query = query.order_by(Tree.tree_id.desc())
+        query = query.order_by(health_priority, Tree.tree_id.desc())
 
     elif sort_order == "age_oldest":
         query = query.order_by(Tree.age.desc())
