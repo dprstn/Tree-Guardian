@@ -990,6 +990,12 @@ def add_tree():
 @app.route('/qr/<int:tree_id>')
 
 def generate_qr(tree_id):
+    Tree.query.get_or_404(tree_id)
+    qr_path = save_tree_qr(tree_id)
+    return send_file(qr_path, mimetype="image/png", max_age=0)
+
+
+def save_tree_qr(tree_id):
     url = f"{QR_PUBLIC_BASE_URL}/local_trees?tree_id={tree_id}"
 
     qr = qrcode.QRCode(box_size=10, border=2)
@@ -1002,7 +1008,30 @@ def generate_qr(tree_id):
     qr_path = os.path.join(app.config['QR_FOLDER'], qr_filename)
     img.save(qr_path, 'PNG')
 
-    return send_file(qr_path, mimetype="image/png")
+    return qr_path
+
+
+@app.route('/admin/regenerate-qrs', methods=['POST'])
+def admin_regenerate_qrs():
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+
+    current_user = User.query.get(session['user_id'])
+    ensure_primary_admin(current_user, commit=True)
+    if not current_user or current_user.role != 'admin':
+        flash('Unauthorised access.', 'danger')
+        return redirect(url_for('homepage'))
+
+    try:
+        tree_ids = [t.tree_id for t in Tree.query.with_entities(Tree.tree_id).all()]
+        for tree_id in tree_ids:
+            save_tree_qr(tree_id)
+
+        flash(f'Regenerated {len(tree_ids)} QR codes.', 'success')
+    except Exception as e:
+        flash(f'Failed to regenerate QR codes: {str(e)}', 'danger')
+
+    return redirect(url_for('admin_panel'))
 
 @app.route('/local_trees')
 def local_trees():

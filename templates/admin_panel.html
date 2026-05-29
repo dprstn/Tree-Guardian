@@ -57,6 +57,27 @@
         }
         .admin-back:hover { background: #cce8d8; }
 
+        .admin-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .admin-regen {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            border: none;
+            border-radius: 999px;
+            background: var(--green);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+        .admin-regen:hover { background: #0a3a25; }
+
         .admin-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -283,6 +304,15 @@
                 justify-content: center;
             }
 
+            .admin-header-actions {
+                width: 100%;
+            }
+
+            .admin-regen {
+                width: 100%;
+                justify-content: center;
+            }
+
             .admin-stats {
                 grid-template-columns: 1fr;
                 margin-bottom: 18px;
@@ -349,9 +379,17 @@
             <h1><i class="fa-solid fa-shield-halved" style="font-size:20px;"></i> Admin Panel</h1>
             <p>Manage community content and users</p>
         </div>
-        <a href="{{ url_for('homepage') }}" class="admin-back">
-            <i class="fa-solid fa-arrow-left"></i> Back to Home
-        </a>
+        <div class="admin-header-actions">
+            <form method="POST" action="{{ url_for('admin_regenerate_qrs') }}"
+                  onsubmit="return confirm('Regenerate QR files for all trees?');">
+                <button type="submit" class="admin-regen">
+                    <i class="fa-solid fa-qrcode"></i> Regenerate QR Codes
+                </button>
+            </form>
+            <a href="{{ url_for('homepage') }}" class="admin-back">
+                <i class="fa-solid fa-arrow-left"></i> Back to Home
+            </a>
+        </div>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
