@@ -34,15 +34,28 @@ app.config['MAIL_USERNAME'] = 'quietgardenercollective@gmail.com'
 app.config['MAIL_PASSWORD'] = 'kotn ilrf ewoe qmvd'
 app.config['MAIL_DEFAULT_SENDER'] = 'quietgardenercollective@gmail.com'
 
-UPLOAD_FOLDER = 'static/uploads/trees'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
-app.config['UPLOAD_FOLDER'] = "static/uploads/trees"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-PROFILE_UPLOAD_FOLDER = os.path.join('static', 'uploads', 'profiles')
-app.config['PROFILE_UPLOAD_FOLDER'] = PROFILE_UPLOAD_FOLDER
-os.makedirs(PROFILE_UPLOAD_FOLDER, exist_ok=True)
-EVENT_UPLOAD_FOLDER = os.path.join('static', 'uploads', 'events')
-os.makedirs(EVENT_UPLOAD_FOLDER, exist_ok=True)
+
+
+def to_static_filename(path):
+    if not path:
+        return ''
+    normalized = path.replace('\\', '/').lstrip('/')
+    if normalized.startswith('static/'):
+        normalized = normalized[len('static/'):]
+    return normalized
+
+
+def static_disk_path(*parts):
+    return os.path.join(app.static_folder, *parts)
+
+
+app.config['UPLOAD_FOLDER'] = static_disk_path('uploads', 'trees')
+app.config['PROFILE_UPLOAD_FOLDER'] = static_disk_path('uploads', 'profiles')
+app.config['EVENT_UPLOAD_FOLDER'] = static_disk_path('uploads', 'events')
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['PROFILE_UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['EVENT_UPLOAD_FOLDER'], exist_ok=True)
 
 BASE_URL = os.environ.get("BASE_URL", "https://127.0.0.1:5000")
 
@@ -946,7 +959,7 @@ def add_tree():
                 return redirect(url_for('add_tree'))
             filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            image_url = f"static/uploads/trees/{filename}"
+            image_url = f"uploads/trees/{filename}"
 
         try:
             tree = Tree(
@@ -1386,7 +1399,7 @@ def add_observation(tree_id):
             return redirect(next_url if next_url else url_for('tree_detail', tree_id=tree_id))
         filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
         file_path = f"uploads/trees/{filename}"
-        full_path = os.path.join('static', file_path)
+        full_path = static_disk_path(*file_path.split('/'))
         file.save(full_path)
         image_path = file_path
     new_obs = Observation(
@@ -1619,17 +1632,18 @@ def edit_tree(tree_id):
         if photo and photo.filename:
             # delete old photo from disk if it exists
             if tree.image_url:
-                old_path = os.path.join('static', tree.image_url.split('static/')[-1])
+                old_rel_path = to_static_filename(tree.image_url)
+                old_path = static_disk_path(*old_rel_path.split('/')) if old_rel_path else ''
                 if os.path.exists(old_path):
                     os.remove(old_path)
 
             # save new photo
             ext = os.path.splitext(secure_filename(photo.filename))[1]
             filename = f"{uuid.uuid4().hex}{ext}"
-            save_path = os.path.join('static', 'uploads', 'trees', filename)
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             photo.save(save_path)
-            tree.image_url = f"static/uploads/trees/{filename}"
+            tree.image_url = f"uploads/trees/{filename}"
 
 
 
@@ -1911,7 +1925,7 @@ def create_event():
         file = request.files.get('event_image')
         if file and file.filename and allowed_file(file.filename):
             filename = str(uuid.uuid4()) + '_' + secure_filename(file.filename)
-            save_path = os.path.join(EVENT_UPLOAD_FOLDER, filename)
+            save_path = os.path.join(app.config['EVENT_UPLOAD_FOLDER'], filename)
             file.save(save_path)
             image_url = 'uploads/events/' + filename
 
@@ -2012,7 +2026,7 @@ def edit_event(event_id):
         file = request.files.get('event_image')
         if file and file.filename and allowed_file(file.filename):
             filename = str(uuid.uuid4()) + '_' + secure_filename(file.filename)
-            save_path = os.path.join(EVENT_UPLOAD_FOLDER, filename)
+            save_path = os.path.join(app.config['EVENT_UPLOAD_FOLDER'], filename)
             file.save(save_path)
             event.image_url = 'uploads/events/' + filename
 
@@ -2375,10 +2389,11 @@ def import_trees():
                 errors.append(f"Row {row_num}: duplicate entry (Tree ID #{existing.tree_id}) – skipped")
                 continue  # skip creating a new tree
             image_url = row.get('image_url', '').strip()
+            image_url = to_static_filename(image_url)
 
             # only use it if the file actually exists on disk
             if image_url:
-                full_path = os.path.join('static', image_url)
+                full_path = static_disk_path(*image_url.split('/'))
                 if not os.path.exists(full_path):
                     print(f"Row {row_num}: image file not found on disk — image skipped")
                     image_url = ''
