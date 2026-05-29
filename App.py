@@ -696,9 +696,15 @@ def homepage():
     )
 
     if community_sort == 'oldest':
-        community_query = community_query.order_by(Observation.observed_time.asc())
+        community_query = community_query.order_by(
+            Observation.observed_time.asc(),
+            Observation.observation_id.asc()
+        )
     else:
-        community_query = community_query.order_by(Observation.observed_time.desc())
+        community_query = community_query.order_by(
+            Observation.observed_time.desc(),
+            Observation.observation_id.desc()
+        )
 
     community_feed = []
     for obs, o_type, obs_user in community_query.all():
