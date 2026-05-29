@@ -1,0 +1,7 @@
+Flask
+Flask-Mail
+Flask-SQLAlchemy
+pytz
+qrcode
+SQLAlchemy
+Werkzeug
