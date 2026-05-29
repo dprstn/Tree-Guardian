@@ -320,6 +320,127 @@ def ensure_primary_admin(user, commit=False):
     return user
 
 
+@app.route('/admin/panel')
+def admin_panel():
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+
+    current_user = User.query.get(session['user_id'])
+    if not current_user:
+        session.clear()
+        return redirect(url_for('login'))
+
+    ensure_primary_admin(current_user, commit=True)
+    if current_user.role != 'admin':
+        flash('Unauthorised access.', 'danger')
+        return redirect(url_for('homepage'))
+
+    users = User.query.order_by(User.user_id).all()
+
+    observations = db.session.query(Observation, User, Observation_type, Tree, Species)\
+        .join(User, Observation.user_id == User.user_id)\
+        .join(Observation_type, Observation.observation_type_id == Observation_type.observation_type_id)\
+        .join(Tree, Observation.tree_id == Tree.tree_id)\
+        .join(Species, Tree.species_id == Species.species_id)\
+        .order_by(Observation.observed_time.desc()).all()
+
+    comments = db.session.query(EventComment, Event)\
+        .join(Event, EventComment.event_id == Event.event_id)\
+        .order_by(EventComment.created_at.desc()).all()
+
+    events = db.session.query(Event, User)\
+        .outerjoin(User, Event.created_by == User.user_id)\
+        .order_by(Event.event_date.desc()).all()
+
+    return render_template(
+        'admin_panel.html',
+        user=current_user,
+        users=users,
+        observations=observations,
+        comments=comments,
+        events=events
+    )
+
+
+@app.route('/admin/delete/observation/<int:obs_id>', methods=['POST'])
+def admin_delete_observation(obs_id):
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+
+    current_user = User.query.get(session['user_id'])
+    ensure_primary_admin(current_user, commit=True)
+    if not current_user or current_user.role != 'admin':
+        flash('Unauthorised access.', 'danger')
+        return redirect(url_for('homepage'))
+
+    obs = Observation.query.get_or_404(obs_id)
+    db.session.delete(obs)
+    db.session.commit()
+    flash('Observation deleted.', 'success')
+    return redirect(url_for('admin_panel'))
+
+
+@app.route('/admin/delete/comment/<int:comment_id>', methods=['POST'])
+def admin_delete_comment(comment_id):
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+
+    current_user = User.query.get(session['user_id'])
+    ensure_primary_admin(current_user, commit=True)
+    if not current_user or current_user.role != 'admin':
+        flash('Unauthorised access.', 'danger')
+        return redirect(url_for('homepage'))
+
+    comment = EventComment.query.get_or_404(comment_id)
+    db.session.delete(comment)
+    db.session.commit()
+    flash('Comment deleted.', 'success')
+    return redirect(url_for('admin_panel'))
+
+
+@app.route('/admin/delete/user/<int:user_id>', methods=['POST'])
+def admin_delete_user(user_id):
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+
+    current_user = User.query.get(session['user_id'])
+    ensure_primary_admin(current_user, commit=True)
+    if not current_user or current_user.role != 'admin':
+        flash('Unauthorised access.', 'danger')
+        return redirect(url_for('homepage'))
+
+    if user_id == current_user.user_id:
+        flash('You cannot delete your own account.', 'danger')
+        return redirect(url_for('admin_panel'))
+
+    user_to_delete = User.query.get_or_404(user_id)
+    if user_to_delete.role == 'admin':
+        flash('Admin accounts cannot be deleted from this panel.', 'danger')
+        return redirect(url_for('admin_panel'))
+
+    for comment in EventComment.query.filter_by(user_id=user_id).all():
+        db.session.delete(comment)
+
+    for event in Event.query.filter_by(created_by=user_id).all():
+        for comment in EventComment.query.filter_by(event_id=event.event_id).all():
+            db.session.delete(comment)
+        EventAttendee.query.filter_by(event_id=event.event_id).delete(synchronize_session=False)
+        db.session.delete(event)
+
+    EventCommentLike.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    Observation.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    Adoption.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    UserTreeTag.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    LoyaltyLedger.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    UserBadge.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    EventAttendee.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+    db.session.delete(user_to_delete)
+    db.session.commit()
+    flash(f'User @{user_to_delete.username} deleted.', 'success')
+    return redirect(url_for('admin_panel'))
+
+
 def make_care_guide_pdf(tree=None, species=None):
     species_name = species.species_name if species else "Local Tree"
     tree_label = f"Tree #{tree.tree_id}" if tree else "Tree Guardian"
@@ -1375,6 +1496,43 @@ def profile():
                            progress_pct=progress_pct,
                            points_to_next=points_to_next,
                            point_rules=point_rules)
+
+
+@app.route('/user/<int:user_id>')
+def public_profile(user_id):
+    if not session.get('is_active'):
+        return redirect(url_for('login'))
+
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+
+    ensure_primary_admin(user, commit=True)
+    viewed_user = User.query.get_or_404(user_id)
+
+    points = db.session.query(func.sum(LoyaltyLedger.points)).filter_by(user_id=viewed_user.user_id).scalar() or 0
+    obs_count = Observation.query.filter_by(user_id=viewed_user.user_id).count()
+
+    current_badge_entry = UserBadge.query.filter_by(user_id=viewed_user.user_id)\
+        .order_by(UserBadge.awarded_at.desc()).first()
+    current_badge = current_badge_entry.badge if current_badge_entry else None
+
+    adopted_trees = db.session.query(Tree, Species)\
+        .join(Adoption, Adoption.tree_id == Tree.tree_id)\
+        .join(Species, Tree.species_id == Species.species_id)\
+        .filter(Adoption.user_id == viewed_user.user_id)\
+        .order_by(Tree.tree_id.desc()).all()
+
+    return render_template(
+        'public_profile.html',
+        user=user,
+        viewed_user=viewed_user,
+        points=points,
+        obs_count=obs_count,
+        adopted_trees=adopted_trees,
+        current_badge=current_badge
+    )
 
 
 @app.route('/edit_profile', methods=['POST'])
