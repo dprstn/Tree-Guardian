@@ -996,7 +996,7 @@ def generate_qr(tree_id):
 
 
 def save_tree_qr(tree_id):
-    url = f"{QR_PUBLIC_BASE_URL}/local_trees?tree_id={tree_id}"
+    url = f"{QR_PUBLIC_BASE_URL}/tree/{tree_id}"
 
     qr = qrcode.QRCode(box_size=10, border=2)
     qr.add_data(url)
