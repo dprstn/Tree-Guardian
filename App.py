@@ -1315,10 +1315,19 @@ def tree_detail(tree_id):
         .filter(UserTreeTag.tree_id == tree_id) \
         .order_by(UserTreeTag.tagged_at.desc()).all()
 
+    # Prefer a user-supplied named location for display; otherwise use coordinates.
+    tree_location_label = None
+    for tag_entry, _ in tagged_by:
+        if tag_entry.location_name and tag_entry.location_name.strip():
+            tree_location_label = tag_entry.location_name.strip()
+            break
+
+    if not tree_location_label:
+        tree_location_label = f"{tree.latitude:.5f}, {tree.longitude:.5f}"
+
     tagged_with_badge = []
 
     for tag_entry, tag_user in tagged_by:
-        print("DEBUG LOCATION: ", tag_entry.location_name)
         user_badge = (
             db.session.query(Badge)
             .join(UserBadge, Badge.badge_id == UserBadge.badge_id)
@@ -1355,6 +1364,7 @@ def tree_detail(tree_id):
                            observations=observations,
                            obs_count=obs_count,
                            tagged_by=tagged_by,
+                           tree_location_label=tree_location_label,
                            user=user,
                            current_badge=current_badge,
                            now=datetime.now(uk_tz),
