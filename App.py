@@ -1315,15 +1315,16 @@ def tree_detail(tree_id):
         .filter(UserTreeTag.tree_id == tree_id) \
         .order_by(UserTreeTag.tagged_at.desc()).all()
 
-    # Prefer a user-supplied named location for display; otherwise use coordinates.
+    # Prefer a user-supplied named location for display; always append coordinates.
+    coord_label = f"{tree.latitude:.5f}, {tree.longitude:.5f}"
     tree_location_label = None
     for tag_entry, _ in tagged_by:
         if tag_entry.location_name and tag_entry.location_name.strip():
-            tree_location_label = tag_entry.location_name.strip()
+            tree_location_label = f"{tag_entry.location_name.strip()} ({coord_label})"
             break
 
     if not tree_location_label:
-        tree_location_label = f"{tree.latitude:.5f}, {tree.longitude:.5f}"
+        tree_location_label = coord_label
 
     tagged_with_badge = []
 
