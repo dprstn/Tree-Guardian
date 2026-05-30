@@ -690,27 +690,14 @@ def homepage():
     if community_sort not in ('newest', 'oldest'):
         community_sort = 'newest'
 
-    community_query = db.session.query(Observation, Observation_type, User).join(
+    community_feed = []
+    community_observations = db.session.query(Observation, Observation_type, User).join(
         Observation_type, Observation.observation_type_id == Observation_type.observation_type_id
     ).join(
         User, Observation.user_id == User.user_id
-    ).filter(
-        Observation.user_id != user.user_id
-    )
+    ).all()
 
-    if community_sort == 'oldest':
-        community_query = community_query.order_by(
-            Observation.observed_time.asc(),
-            Observation.observation_id.asc()
-        )
-    else:
-        community_query = community_query.order_by(
-            Observation.observed_time.desc(),
-            Observation.observation_id.desc()
-        )
-
-    community_feed = []
-    for obs, o_type, obs_user in community_query.all():
+    for obs, o_type, obs_user in community_observations:
         community_feed.append({
             'title': f'{o_type.observation_category} Report',
             'date': obs.observed_time,
@@ -720,6 +707,26 @@ def homepage():
             'user_name': f'{obs_user.first_name} {obs_user.last_name}',
             'username': obs_user.username
         })
+
+    community_tags = db.session.query(UserTreeTag, User).join(
+        User, UserTreeTag.user_id == User.user_id
+    ).all()
+
+    for tag, tag_user in community_tags:
+        community_feed.append({
+            'title': 'Tagged a Tree',
+            'date': tag.tagged_at,
+            'details': f'Location: {tag.location_name}' if tag.location_name else 'Tagged a tree location',
+            'icon': 'fa-tag',
+            'tree_id': tag.tree_id,
+            'user_name': f'{tag_user.first_name} {tag_user.last_name}',
+            'username': tag_user.username
+        })
+
+    community_feed.sort(
+        key=lambda x: (x['date'] is None, x['date']),
+        reverse=(community_sort != 'oldest')
+    )
 
     return render_template("homepage.html", user=user, username=user.username, role=user.role.lower() if user.role else 'user', adopted_count=adopted_count,
                            total_trees_in_db=total_trees_in_db,
@@ -818,21 +825,14 @@ def community_feed():
     if sort_order not in ('newest', 'oldest'):
         sort_order = 'newest'
 
-    query = db.session.query(Observation, Observation_type, User).join(
+    feed_items = []
+    community_observations = db.session.query(Observation, Observation_type, User).join(
         Observation_type, Observation.observation_type_id == Observation_type.observation_type_id
     ).join(
         User, Observation.user_id == User.user_id
-    ).filter(
-        Observation.user_id != user.user_id
-    )
+    ).all()
 
-    if sort_order == 'oldest':
-        query = query.order_by(Observation.observed_time.asc())
-    else:
-        query = query.order_by(Observation.observed_time.desc())
-
-    feed_items = []
-    for obs, o_type, obs_user in query.all():
+    for obs, o_type, obs_user in community_observations:
         feed_items.append({
             'title': f'{o_type.observation_category} Report',
             'date': obs.observed_time,
@@ -842,6 +842,26 @@ def community_feed():
             'user_name': f'{obs_user.first_name} {obs_user.last_name}',
             'username': obs_user.username
         })
+
+    community_tags = db.session.query(UserTreeTag, User).join(
+        User, UserTreeTag.user_id == User.user_id
+    ).all()
+
+    for tag, tag_user in community_tags:
+        feed_items.append({
+            'title': 'Tagged a Tree',
+            'date': tag.tagged_at,
+            'details': f'Location: {tag.location_name}' if tag.location_name else 'Tagged a tree location',
+            'icon': 'fa-tag',
+            'tree_id': tag.tree_id,
+            'user_name': f'{tag_user.first_name} {tag_user.last_name}',
+            'username': tag_user.username
+        })
+
+    feed_items.sort(
+        key=lambda x: (x['date'] is None, x['date']),
+        reverse=(sort_order != 'oldest')
+    )
 
     return render_template('community_feed.html', feed_items=feed_items, sort_order=sort_order, user=user)
 

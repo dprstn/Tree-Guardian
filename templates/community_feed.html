@@ -54,7 +54,7 @@
         <h1 class="welcome-header activity-page-title">Community Feed</h1>
 
         <div class="activity-page-toolbar">
-            <p>Showing observations from other community members</p>
+            <p>Showing community activity</p>
 
             <form action="{{ url_for('community_feed') }}" method="GET" class="sort-form">
                 <select name="sort" onchange="this.form.submit()" class="activity-sort-select">
@@ -87,7 +87,7 @@
             {% else %}
                 <div class="activity-empty-state">
                     <i class="fa-solid fa-seedling"></i>
-                    <p>No community observations yet.</p>
+                    <p>No community activity yet.</p>
                     <a href="{{ url_for('local_trees') }}" class="c-button gold-variation activity-empty-link">Explore Trees</a>
                 </div>
             {% endif %}
