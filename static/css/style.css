@@ -6752,7 +6752,7 @@ body.observation-modal-open {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
-    min-width: 700px;
+    min-width: 50px;
 }
 
 .admin-page-body .admin-table th {
@@ -6940,7 +6940,7 @@ body.observation-modal-open {
     }
 
     .admin-page-body .admin-table {
-        min-width: 620px;
+        min-width: 50px;
     }
 
     .admin-page-body .admin-table th,
@@ -7003,7 +7003,7 @@ body.observation-modal-open {
     }
 
     .admin-page-body .admin-table {
-        min-width: 560px;
+        min-width: 50px;
         font-size: 12px;
     }
 
